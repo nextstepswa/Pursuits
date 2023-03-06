@@ -35,6 +35,7 @@ library(leaflet)
 library(leaflegend)
 library(htmltools)
 library(scales)
+library(icons)
 
 # Check if need to rebuild clean pursuits data, otherwise load existing file
 
@@ -1792,6 +1793,12 @@ incidents.p %>%
 ```
 
 ____
+
+## GitHub respository
+
+```{r access, child='./access.Rmd'}
+```
+
 
 # Pursuit legislation
 
