@@ -77,7 +77,7 @@ WTSC <- WTSC.raw %>%
          city.code = city,
          person.num = pnumber,
          ptype,
-         injury, diedscene, death_dt,
+         injury.type = injury, diedscene, death_dt,
          vehicle.num = vnumber,
          spuse, # 5=police
          persons = pforms,
@@ -100,6 +100,15 @@ WTSC <- WTSC.raw %>%
          race1:race5
   ) %>%
   
+  # Injury
+  mutate(injury = case_when(
+    injury.type==4 ~ "fatal",
+    injury.type==3 ~ "serious injury",
+    injury.type %in% c(1, 2, 5) ~ "minor injury",
+    injury.type==0 ~ "no injury",
+    TRUE ~ "Unknown")
+  ) %>%
+
   # Some WTSC city codes don't exist in the GSA; inspection suggests
   # the changes made here
   mutate(city.code = ifelse(city.code==0, NA_real_, city.code),
@@ -111,13 +120,15 @@ WTSC <- WTSC.raw %>%
   left_join(., city.codes, by = "city.code")
 
 with(WTSC, table(is.na(city.code), is.na(city.name), useNA = "al"))
-table(WTSC$city.code[is.na(WTSC$city.name)])
+#table(WTSC$city.code[is.na(WTSC$city.name)])
 
 
 WTSC.min <- WTSC %>%
-  select(wtscID, pursuit, county.name, county.code, city.name, city.code, date, age, sex, ptype, fatals)
+  select(wtscID, pursuit, county.code, city.code, date, victim, victim.all, age, sex, ptype, injury, persons, vehicles, fatals)
 
-WTSC.pursuit.min <- WTSC.min %>% filter(pursuit == 1)
+WTSC.pursuit.min <- WTSC.min %>% 
+  filter(pursuit == 1) %>% 
+  select(-c(pursuit, victim.all))
 
 rm(list = ls(pattern="codes|dest|url|person"))
 
