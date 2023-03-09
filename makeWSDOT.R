@@ -42,6 +42,11 @@ WSDOT <- WSDOT.raw %>%
   left_join(., wsdot.pursuit.ids, by = c(`Collision Report Number` = "wsdotID")) %>%
   left_join(., wsdot.person.records) %>%
   
+  mutate(sex = case_when(
+    Gender == "Male" ~ "M", 
+    Gender == "Female" ~ "F",
+    TRUE ~ "O/U")) %>%
+  
   select(wsdotID = `Collision Report Number`,
          pursuit.driver, pursuit,
          county.name = `County Name`,
@@ -67,7 +72,7 @@ WSDOT <- WSDOT.raw %>%
          agency.name = `Agency Long Name`,
          agency.type = `Investigative Agency`,
          age = Age,
-         sex = Gender,
+         sex,
          case.number = `Case Number`,
          unit.number = `Unit Number`,
          unit.description = `Unit Type Description`,
