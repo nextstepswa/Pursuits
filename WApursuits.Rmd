@@ -153,7 +153,20 @@ ggplotly(prepost) %>% reverse_legend_labels()
 The graph compares the period after the law took effect ("Post-reform"), to the same timeframe before ("Pre-reform").  The total time covered by this comparison is now about
 `r round(as.numeric((Sys.Date()-date.sameperiod.before)/365))` years, with half before and half after the reform.   The pursuit fatalities include all cases where an active vehicular pursuit led to a vehicular homicide.
 
-* Note that the value of the Pre vs. Post comparison will change as time moves on.   As the time since reform increases there may be new pursuit fatalities added to the post-reform period, and/or old pursuit fatalities added to the post-reform period since the lookback window will extend farther into the past.
+____
+
+Note that the value of the Pre vs. Post comparison will change as time moves on.   As the time since reform grows longer there may be new pursuit fatalities added to the post-reform period, and/or old pursuit fatalities added to the pre-reform period since the lookback window will extend farther into the past.
+
+Since the report was last updated, there have been 2 additions to the pre-reform lookback period:
+
+* Kimberly Winslow, a subject.  She had her 9 year old son in the car at the time, he was injured but survived. (<a href=\"https://q13fox.com/2019/11/24/woman-dies-after-crashing-car-into-tree-in-federal-way-6-year-old-in-car-uninjured/\">https://q13fox.com/2019/11/24/woman-dies-after-crashing-car-into-tree-in-federal-way-6-year-old-in-car-uninjured/</a>)
+
+* State Trooper Justin Robert Schaffer, an officer.  Like Kent Officer Moreno (not yet in the lookback window), Trooper Schaffer was hit while laying down spike strips.  Unlike Moreno, who was hit by the patrol car in pursuit, Schaffer was hit by the fleeing vehicle. (<a href=\"https://www.chronline.com/stories/man-convicted-in-death-of-state-trooper-justin-schaffer-sentenced-to-45-years-in-prison,296378\">https://www.chronline.com/stories/man-convicted-in-death-of-state-trooper-justin-schaffer-sentenced-to-45-years-in-prison,296378</a>)
+
+One more note, on a March 2023 case in Yakima where a speeding car going the wrong way on I-82 caused a head on collision that killed two children in the other car.  Police had begun pursuits of this vehicle several times in the previous hour, but terminated them due to
+safety concerns. (<a href="https://www.yakimaherald.com/news/local/crime_and_courts/affidavit-troopers-tried-four-times-to-stop-driver-accused-of-killing-two-children-in-i/article_a4c3021e-bd52-11ed-8115-dfe44d5c6c2b.html">https://www.yakimaherald.com/news/local/crime_and_courts/affidavit-troopers-tried-four-times-to-stop-driver-accused-of-killing-two-children-in-i/article_a4c3021e-bd52-11ed-8115-dfe44d5c6c2b.html</a>)  At the time of the crash, the last pursuit had been terminated 10 minutes earlier.  For that reason, this case is classified as "pursuit-involved" rather than "active pursuit," and is not included in the fatality count in the graphic above (see the [Data section](#data) of the report for more details on definitions).  This case is included in the analysis below where pursuit-involved incidents are examined.
+
+____
 
 It will be important to continue to monitor the data, but the trend seen in this initial period suggests that the law is working as intended to improve public safety: It is saving lives. 
 
