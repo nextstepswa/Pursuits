@@ -24,11 +24,13 @@ max.yr <- max(merged_data$year)
 # All cases: ----
 
 ## Fatalities
+## Remove people not killed by police unless the incident is pursuit-related.
 ## incident.type identifies pursuit and after pursuit cases from vpursuit
 ## incident.num is stable for multi-fatality incidents (coded manually), but
 ##  may not be stable for all other cases
 
 fatalities.all <- merged_data %>% 
+  filter(!(not.kbp==1 & pursuit.type == "Reviewed not related")) %>%
   mutate(
     incident.type = factor(
       case_when(
