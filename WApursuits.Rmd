@@ -42,9 +42,13 @@ library(icons)
 if(file.exists(here::here("data-outputs", "FEpursuits.rda"))){
   lastmod.pursuit <- file.info(here::here("data-outputs", "FEpursuits.rda"))$mtime
   lastmod.wa2015 <- file.info("~/GitHub/fewapo/data-outputs/WA2015.rda")$mtime
+  lastmod.makeFE <- file.info(here::here("makeFEpursuits.R"))$mtime
+
   
-  if(lastmod.wa2015 > lastmod.pursuit) {
+  if(lastmod.wa2015 > lastmod.pursuit | lastmod.makeFE > lastmod.pursuit) {
     source(here::here("makeFEpursuits.R"))
+    print(message("Rebuilding pursuit dataset"))
+    
   } else {
     load(here::here("data-outputs", "FEpursuits.rda"))
   }
@@ -164,7 +168,7 @@ Since the report was last updated, there have been 2 additions to the pre-reform
 * State Trooper Justin Robert Schaffer, an officer.  Like Kent Officer Moreno (not yet in the lookback window), Trooper Schaffer was hit while laying down spike strips.  Unlike Moreno, who was hit by the patrol car in pursuit, Schaffer was hit by the fleeing vehicle. (<a href=\"https://www.chronline.com/stories/man-convicted-in-death-of-state-trooper-justin-schaffer-sentenced-to-45-years-in-prison,296378\">https://www.chronline.com/stories/man-convicted-in-death-of-state-trooper-justin-schaffer-sentenced-to-45-years-in-prison,296378</a>)
 
 One more note, on a March 2023 case in Yakima where a speeding car going the wrong way on I-82 caused a head on collision that killed two children in the other car.  Police had begun pursuits of this vehicle several times in the previous hour, but terminated them due to
-safety concerns. (<a href="https://www.yakimaherald.com/news/local/crime_and_courts/affidavit-troopers-tried-four-times-to-stop-driver-accused-of-killing-two-children-in-i/article_a4c3021e-bd52-11ed-8115-dfe44d5c6c2b.html">https://www.yakimaherald.com/news/local/crime_and_courts/affidavit-troopers-tried-four-times-to-stop-driver-accused-of-killing-two-children-in-i/article_a4c3021e-bd52-11ed-8115-dfe44d5c6c2b.html</a>)  At the time of the crash, the last pursuit had been terminated 10 minutes earlier.  For that reason, this case is classified as "pursuit-involved" rather than "active pursuit," and is not included in the fatality count in the graphic above (see the [Data section](#data) of the report for more details on definitions).  This case is included in the analysis below where pursuit-involved incidents are examined.
+safety concerns. (<a href="https://www.yakimaherald.com/news/local/crime_and_courts/affidavit-troopers-tried-four-times-to-stop-driver-accused-of-killing-two-children-in-i/article_a4c3021e-bd52-11ed-8115-dfe44d5c6c2b.html">https://www.yakimaherald.com/news/local/crime_and_courts/affidavit-troopers-tried-four-times-to-stop-driver-accused-of-killing-two-children-in-i/article_a4c3021e-bd52-11ed-8115-dfe44d5c6c2b.html</a>)  At the time of the crash, the final pursuit had been terminated 10 minutes earlier.  For that reason, this case is classified as "pursuit-involved" rather than "active pursuit," and is not included in the active pursuit vehicular fatality count in the graphic above (see the next section and the [Data section](#data) of the report for more details on definitions).  This case is included in the analysis below where pursuit-involved incidents are examined.
 
 ____
 
@@ -177,11 +181,11 @@ For information on data sources and identification of vehicular pursuit incident
 
 ## What this report covers
 
-The remainder of this report examines the range of fatalities that are associated with police vehicular pursuits
+The remainder of this report examines the range of fatalities that are associated with police vehicular pursuits:
 
 * "Pursuit vehicular fatalities" - an active vehicular pursuit led to a vehicular homicide caused by one of the cars involved in the pursuit (shown in the graph above).
 
-* "After pursuit fatalities" -- a pursuit was part of the incident, but ended and the subject was subsequently killed (typically by gunshot).
+* "After pursuit fatalities" -- a pursuit was involved earlier in the incident, but had ended and the subject was subsequently killed (typically by gunshot).
 
 * "Attempted stop fatalities" -- a subject fled an attempted stop by police and committed a vehicular homicide in the process, but the police vehicle did not engage in pursuit.   We are relying on the media report of the law enforcement statement that the patrol car lights and/or siren were activated to stop the subject, but there was no pursuit.
 
@@ -189,7 +193,7 @@ The remainder of this report examines the range of fatalities that are associate
 
 The table of contents on the left shows the outline of the information.  All of the entries are linked and can be used to navigate through the report.  Note that clicking on an entry of the TOC will cause the sub-headings to display if there are any.  
 
-Within each section of the report listed in the TOC, you may find "tabs" on the page that contain additional information.  The active tab is highlighted with a blue filled box, and you can click the other inactive tabs to access their information.
+Within each section of the report listed in the TOC, you may find "tabs" on the page that contain additional information.  The active tab is highlighted with a blue filled box, and you can click the inactive tabs on either side of the active tab to access their information.
 
 The graphics use a consistent color coding to help with comparisons, and the color scheme is linked to the type of data in the graph:  pursuit vehicular fatalities (color codes for victim type), after pursuit fatalities (color codes for homicide vs. suicide), and incidents (color codes for pursuit vehicular fatalities and after pursuit fatalities).
 
@@ -428,9 +432,9 @@ The table below shows how often pursuits and other vehicle-related deaths are in
 * *Vehicle not involved* -- No indication that a vehicle was involved in the incident that led to this fatality.
 
 * *After pursuit fatality* -- A vehicle pursuit occurred during the incident, but was not the immediate cause of death.  Most of these cases are gun-related fatalities
-(`r scales::percent(pct.shot.apf)`); the person is either shot by police, or dies of a self-inflicted gunshot.  The suicides are broken out in the table below.
+(`r scales::percent(pct.shot.apf)` are either shot by police or die of a self-inflicted gunshot).  The suicides are broken out in the table below.
 
-* *Pursuit vehicular fatality* -- A pursuit directly led to a vehicular homicide (e.g., a crash-related fatality, or someone getting run over).
+* *Pursuit vehicular fatality* -- A pursuit led directly to a vehicular homicide (e.g., a crash or someone getting run over).
 
 * *Attempted stop* -- The subject fled a traffic stop and committed a vehicular homicide, but police report they did not engage in pursuit.
 
@@ -491,7 +495,7 @@ fatalities.all %>%
   bind_rows(data.frame(cod.cat ="Total",
                        Number = sum(.$Number),
                        Percent = sum(.$Percent))) %>%
-  mutate(Percent = scales::percent(Percent)) %>%
+  mutate(Percent = scales::percent(Percent, acc = 0.1)) %>%
   rename(`Cause of Death` = cod.cat) %>%
 
   
@@ -547,7 +551,7 @@ There are several ways we can examine the data over time.  Some are better suite
 
 * *Pre vs. post reform:*  This is the the clearest "apples to apples" comparison.  It shows the number of people killed in equivalent time periods before and after the law was changed.
 
-* *Calendar year:*  This does not give a very clear picture of the impact, because the law was changed in the middle of the 2021.  The first clear comparisons will be between 2022 and later years to 2020 and earlier years.  At this point we only have 2022 to compare in the post-reform period.
+* *Calendar year:*  This does not give a very clear picture of the impact, because the law was changed in the middle of 2021.  The first clear comparisons will be between 2022 and later years to 2020 and earlier years.  At this point we only have a single year to compare in the post-reform period.
 
 * *Legislative year:* This does a better job of showing the impact, because the years are defined by when legislation becomes effective.  But we only have one full legislative year of data post-HB 1054, so again we only have one year to compare.
 
@@ -633,6 +637,7 @@ df <- fatalities.pvf %>%
   group_by(Year) %>%
   mutate(Total = sum(Number))
 
+ymax <- max(df$Total)
 
 p <- ggplot(df, aes(x=Year, y=Number, 
                     fill = Victim)) +
@@ -648,6 +653,8 @@ p <- ggplot(df, aes(x=Year, y=Number,
   
   scale_fill_manual(values = cols.ap) +
   
+  ylim(0, (ymax + 2)) +
+  scale_y_continuous(breaks = 1:(ymax + 1)) +
   scale_x_continuous(breaks = min.yr:max.yr)
 
   
@@ -775,6 +782,8 @@ df <- fatalities.apf %>%
   group_by(leg.year) %>%
   mutate(Total = sum(Number))
 
+ymax <- max(df$Total)
+
 p <- ggplot(df, aes(x=leg.year, y=Number, 
                     fill = Fatality)) +
   
@@ -784,13 +793,15 @@ p <- ggplot(df, aes(x=leg.year, y=Number,
        x = "Legislative Year",
        y = "Number") +
   
-  #scale_y_continuous(breaks= 1:max(df$Total)) +
+  ylim(0, ymax+2) +
+  
+  scale_y_continuous(breaks= 1:(ymax + 2)) +
   
   scale_fill_manual(values = c("gold2", "steelblue4")) +
 
   annotate("text", 
            x = "Aug2021-Jul2022", 
-           y = unique(df$Total[df$leg.year == "Aug2021-Jul2022"]) + 2, 
+           y = ymax + 1.5, 
            label = "post\nreform", size = 3) +
   
   annotate("text",
@@ -804,7 +815,7 @@ p <- ggplot(df, aes(x=leg.year, y=Number,
 # see https://plotly.com/r/text-and-annotations/
 a <- list(
   x = 8, # "Aug2022-Jul2023"
-  y = unique(df$Total[df$leg.year == "Aug2021-Jul2022"]) + 2,
+  y = ymax + 1.5,
   xref = "x",
   yref = "y",
   showarrow = TRUE,
@@ -1601,7 +1612,7 @@ The official government source of data for police pursuit fatalities is the [Fat
 
 * **The official data have a long publication lag.**
 
-  As of `r format(Sys.Date, format="%B %d, %Y")`, the NHTSA data are only available through 2020, and the WTSC data through 2021.  Since the pursuit policy change went into effect on July 25, 2021, the time lag in the official datasets makes it impossible to use them to assess impacts of the policy change.  In Washington, real time police traffic collision reports (PTCRs) can be accessed through the Washington State Patrol Collision Analysis Tool [here](https://fortress.wa.gov/wsp/collisionanalysistool/), but these do not identify pursuit-related incidents.
+  As of `r format(Sys.Date(), format="%B %d, %Y")`, the FARS data are only available through 2020, and the WTSC data through 2021.  Since the pursuit policy change went into effect on July 25, 2021, the time lag in the official datasets makes it impossible to use them to assess impacts of the policy change.  In Washington, real time police traffic collision reports (PTCRs) can be accessed through the Washington State Patrol Collision Analysis Tool [here](https://fortress.wa.gov/wsp/collisionanalysistool/), but these do not identify pursuit-related incidents.
   
 * **The official data do not include after pursuit fatalities.**
 
@@ -1609,7 +1620,7 @@ The official government source of data for police pursuit fatalities is the [Fat
 
 * **The official data likely undercount pursuit vehicular fatalities.**
 
-   The WTSC and FARS were not originally designed to provide accurate data on pursuit fatalities.  The "police pursuit involved" tag was added in 1994 to FARS ([p. 91, FARS Users Manual](https://crashstats.nhtsa.dot.gov/Api/Public/Publication/813254)).  The way in which this is captured likely varies across the states.  In the WTSC, tagging an incident as pursuit-related involves a labor-intensive manual coding of the law enforcement narrative documents submitted with the PTCR. If the pursuit is not mentioned in the narrative, if there is no narrative, or if the coder fails to tag a case, a pursuit incident will fail to be identified.  The likelihood that this results in under-identification of pursuit-related fatalties was acknowledged by the Research Director of the WTSC [in a recent interview](https://www.axios.com/local/seattle/2023/02/23/police-vehicle-pursuits-washington-state-2023).
+  The WTSC and FARS were not originally designed to provide accurate data on pursuit fatalities.  The "police pursuit involved" tag was added in 1994 to FARS ([p. 91, FARS Users Manual](https://crashstats.nhtsa.dot.gov/Api/Public/Publication/813254)).  The way in which this is captured likely varies across the states.  Here in WA, the WTSC tags an incident as pursuit-related through a labor-intensive manual coding of the law enforcement narrative documents submitted with the PTCR. If the pursuit is not mentioned in the narrative, if there is no narrative, or if the coder fails to tag a case, a pursuit incident will fail to be identified.  The likelihood that this results in under-identification of pursuit-related fatalties was acknowledged by the Research Director of the WTSC [in a recent interview](https://www.axios.com/local/seattle/2023/02/23/police-vehicle-pursuits-washington-state-2023).
   
   Incomplete coverage of fatalities related to police activities is unfortunately the norm in official datasets.  Homicides by police have been found to be undercounted by about 50% in official government data sources like the [Arrest Related Death Program](https://bjs.ojp.gov/library/publications/assessment-coverage-arrest-related-deaths-program), the [National Vital Statistics System](https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1002399) and the [Uniform Crime Reports](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1447919/).  The most recent analysis to have replicated this finding is from the Institute for Health Metrics and Evaluation at the UW in 2021, published in the Lancet, one of the most respected peer-reviewed science publications in the world.  You can access that paper online [here](https://www.thelancet.com/journals/lancet/article/PIIS0140-6736(21)01609-3/fulltext). 
   
@@ -1622,7 +1633,7 @@ The official government source of data for police pursuit fatalities is the [Fat
    By contrast, detailed incident-based information *is* available in the data from Fatal Encounters.  The document link provided for each case in the Fatal Encounters dataset contains a wealth of additional contextual information, and serves as a springboard for further research on individual cases.  These media reports also help to remind us that each of these "cases" is a person, someone from our community, and not just a number.
 
 
-The Fatal Encounters dataset are not perfect either.  They also likely undercount the true number of fatalities associated with pursuits, as the search methods used by this project rely on these cases leaving a digital signature online, and not all pursuit fatalities will be reported this way.  They do, however, provide more complete information, on a wider range of cases, and in a more timely manner, than the official data.  
+The Fatal Encounters dataset is not perfect.  They also likely undercount the true number of fatalities associated with pursuits, as the search methods used by this project rely on these cases leaving a digital signature online, and not all pursuit fatalities will be reported this way.  They do, however, provide more complete information, on a wider range of cases, and in a more timely manner, than the official data.  
 
 
 > The number of fatalities we report here gives a *lower bound* on the true number vehicle pursuit-related fatalities.  There may be more, but there will not be less.
@@ -1640,19 +1651,31 @@ We begin with a dataset that merges information on fatalities from the Fatal Enc
 
 More information can be found in [this report](https://rpubs.com/moxbox/wa_since2015), which also has links to the GitHub repository that hosts all of the basic data cleaning and analysis scripts.
 
+
+### Case inclusion/exclusion in this report
+
+For this analysis, we exclude cases where a person is killed by someone other than a law enforcement officer during a police encounter, unless the incident was pursuit related (n = `r nrow(merged_data) - nrow(fatalities.all)` cases).  The Fatal Encounters project keeps track of all persons killed during these encounters, regardless of who committed the homicide.  So we exclude these cases, with these exceptions:  
+
+* Since pursuit fatalities are often caused by the fleeing subject, and this is a key aspect of the risks that police pursuits pose to the general public, we retain these cases in the dataset.  
+
+* We also retain after-pursuit suicides.  This term refers to a person taking their own life with a gun, not to "suicide by cop."  The classification is based on the media report, which sometimes refers to a coroner's or medical examiner's determination.  These cases are identified separately in the tables and graphics.  
+
+The final number of fatalities included is (`r paste("n =", nrow(fatalities.all))`), and the final number of incidents is (`r paste("n =", nrow(incidents.all))`).
+
+
 ### Pursuit review
 
-All cases in the dataset were reviewed for evidence of pursuit involvement and coded into categories.  
+All included cases in the dataset were reviewed for evidence of pursuit involvement and coded into categories.  
 
 We reviewed all the available evidence in the dataset, including original variables coded by Fatal Encounters and the Washington Post and the link to the verification document (typically a news article).  We conducted additional online searches if this information was not sufficient.  Using this information we classified cases into the following categories:
 
 * *Active Pursuit* -- vehicular homicides from an active pursuit (e.g., a crash-related fatality, or someone getting run over).  
 
-* *Terminated pursuit* -- vehicular homicides from an active pursuit that was reportedly terminated just before the accident occurred.
+* *Terminated pursuit* -- vehicular homicides from an active pursuit that was reportedly terminated just before the accident occurred.  "Just before" means within a minute or a mile.
 
-* *Involved pursuit * -- a vehicle pursuit occurred during the incident, but it was over (all vehicles had come to a stop) when the person was killed, and the vehicles involved in the pursuit were not the cause of death 
-(in `r scales::percent(pct.shot.apf)` 
-of these cases the person died by gunshot, either killed by police or self-inflicted).
+* *Involved pursuit * -- a vehicle pursuit occurred during the incident, but it had finished before the person was killed, and the vehicles involved in an active or just terminated pursuit were not the cause of death. 
+In `r scales::percent(pct.shot.apf)` 
+of these cases the person died by gunshot, either killed by police or self-inflicted.
 
 * *Attempted stop* -- vehicular homicides that occur when the subject flees a traffic stop but is not pursued.  We are relying on a media report of the law enforcement statement that there was no pursuit, but lights and/or siren may have been activated.
 
@@ -1686,20 +1709,16 @@ tbl %>% kbl(caption = "Coding results") %>%
   
 ```
 
-### Cases included in this report
+Some tables in the beginning of the [Pursuit Statistics](#pursuit-statistics) section include all cases in the datset, to establish the relative fraction of pursuit-related fatalities in the context of police encounters.
 
-All cases -- Some tables in the introduction include all cases in the datset (`r paste("n =", nrow(fatalities.all))`).
-
-Pursuit related cases -- The majority of the report focuses on the two pursuit-related fatality categories:  pursuit vehicular fatalities and after pursuit fatalities
-(`r paste("n =", nrow(fatalities.p))`).  The two cateories are presented separately in the pursuit statistics on fatalities, and combined but distinguished by color in the pursuit statistics on incidents.
-We retained after pursuit suicides.  This term refers to a person taking their own life with a gun, not to "suicide by cop."  The classification is based on the media report, which sometimes refers to a coroner's or medical examiner's determination.  These cases are identified separately in the graphics.
-
+The majority of the report focuses on the two pursuit-related fatality categories:  pursuit vehicular fatalities (`r paste("n =", nrow(fatalities.pvf))`) and after pursuit fatalities
+(`r paste("n =", nrow(fatalities.apf))`).  These two categories are presented separately in the pursuit statistics for persons, and combined but distinguished by color in the pursuit statistics for incidents.
 
 ____
 
 ### Coding vehicular fatality victim types
 
-Vehicular fatalities are a subset of the cases identified by the "vpursuit" variable above: the cases where the cause of death is a vehicle.  This includes all fatalities from active and terminated pursuits, attempted stops and vehicle accidents. There are also a couple of "Involved pursuit" incidents where a vehicle is the cause of death.  In one the subjects car was stopped and he fled by foot onto I5 where he was hit and killed.  In the other the officer was making a u-turn at the start of the pursuit, and the subject crashed into them and died.
+Vehicular fatalities are a subset of the cases identified by the "vpursuit" variable above: the cases where the cause of death is a vehicle.  This includes all fatalities from active and terminated pursuits, attempted stops and vehicle accidents. There are also a few "Involved pursuit" incidents where a vehicle is the cause of death.  In one the subject's car was stopped after a pursuit and he fled by foot onto I5 where he was hit and killed.  In another the officer was making a u-turn at the start of the pursuit, and the subject crashed into them and died.
 
 For each vehicular fatality we coded
 
@@ -1726,7 +1745,7 @@ Our ability to identify and track these incidents is far from perfect.  The two 
 
 2. We rely on online documents to find and code these cases. 
 
-* We miss incidents that do not leave an online trace
+* We miss incidents that do not leave an online trace, or if our search methods do not capture that trace
 
 * We miss incidents if the document reports the fatality but fails to report on the pursuit
 
@@ -1740,13 +1759,15 @@ ____
 
 ### Ambiguous cases
 
-In 2 cases, the information available in the media report left it somewhat unclear whether the case should be classified as a pursuit or as an attempted stop:  Robert Bray (9/25/2022) and Stephanie Laguardia (3/16/2022).  We coded these as pursuits, given the balance of the evidence.  If these cases were instead coded as attempted stops, they would be removed from the pursuit vehicular fatality count.  Since both of these cases occurred post-reform, the pre v. post comparison of fatalities would change, from 
+In 2 incidents, the information available in the media report left it somewhat unclear whether the incident should be classified as a pursuit or as an attempted stop:  Robert Bray (9/25/2022) and Stephanie Laguardia (3/16/2022).  We coded these as pursuits, given the balance of the evidence.  If these cases were instead coded as attempted stops, they would be removed from the pursuit vehicular fatality count.  Since both of these cases occurred post-reform, the pre v. post comparison of fatalities would change, from 
 `r pre.reform.num` vs `r post.reform.num` to 
 `r pre.reform.num` vs `r post.reform.num - 2`, an 
 `r scales::percent(abs((post.reform.num - 2)/pre.reform.num -1))` reduction in fatalities after the change in pursuit policy.
 
-In 1 case, the events lay on the boundary of the pursuit category:  Sergey Pavlovich (6/28/2019).  Here the officer reportedly was making a U-turn in response to a 911 call for speeding motorcycles, and saw the motorcycles approaching him at the time.  One motorcycle crashed into the patrol car, killing the motorcycle driver.  It is unclear whether the officer intended to give pursuit.  We coded this case as "pursuit-involved", but it could also be considered a "Vechicular accident".  This case would have no impact on the estimate of the post-reform change in fatalities.
+In 1 incident, the events lay on the boundary of the pursuit category:  Sergey Pavlovich (6/28/2019).  Here the officer reportedly was making a U-turn in response to a 911 call for speeding motorcycles, and saw the motorcycles approaching him at the time.  Pavlovich's motorcycle crashed into the patrol car, killing him.  It is unclear whether the officer intended to give pursuit.  We coded this case as "pursuit-involved", but it could also be considered a "Vehicular accident".  This case would have no impact on the estimate of the post-reform change in fatalities.
 
+
+In 1 incident, the events lay close to the boundary between "pursuit-involved" and "terminated pursuit".  This incident involved a speeding motorist who was pursued multiple times over the course of an hour by 4 different state patrol troopers.  In each case, the pursuit was terminated for safety reasons, as the motorist exceeded 100 mph, weaving in and out of traffic.  The last pursuit terminated 10 minutes before the motorist crashed into another vehicle, killing 2 people in that vehicle.  Since the pursuit was terminated 10 minutes before the crash, and the terminated pursuit classification requires termination within a minute or a mile of the vehicular homicide, we classified this incident as "pursuit-involved".
 ____
 
 ## Download the data {.tabset .tabset-pills}
