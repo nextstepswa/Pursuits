@@ -50,7 +50,6 @@ fatalities.all <- merged_data %>%
                      TRUE ~ "Other"),
     cod3 = forcats::fct_relevel(cod3, "Other", after=Inf),
     postreform = ifelse(date > reform.date, 1, 0),
-    agency.type = ifelse(grepl("State", agency.type), "State Patrol", agency.type)
   ) %>%
   arrange(desc(incident.type), date) %>%
   mutate(
@@ -59,6 +58,8 @@ fatalities.all <- merged_data %>%
       100 + as.numeric(rownames(.))),
     victim = factor(victim,
                     levels = c("Officer", "Bystander", "Passenger", "Subject")))
+
+levels(fatalities.all$agency.type)[levels(fatalities.all$agency.type)=="State Police"] ="State Patrol"
 
 ## Incidents
 
