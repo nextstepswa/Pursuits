@@ -79,6 +79,7 @@ incidents.all <- fatalities.all %>%
     agency.type = first(agency.type),
     city = first(city),
     county = first(county),
+    district = first(WA_District),
     url_info = first(url_info),
     url_click = first(url_click),
     fatalities = n(),
@@ -209,6 +210,7 @@ allrows.legyr.pvf <- data.frame(leg.year = sort(rep(unique(fatalities.pvf$leg.ye
 
 colors <- scales::brewer_pal(palette = "Spectral")(4) # Colors for active pursuit fatalities
 cols.ap <- setNames(colors, victim.types) # Set names according to legend order
+cols.2 <- setNames(c("firebrick", "lightblue3"), c("Other People", "Subject")) # For 2-grp breakdown
 
 ## incidents by incident type
 
@@ -221,6 +223,8 @@ allrows.legyr.inci <- data.frame(leg.year = sort(rep(unique(fatalities.pvf$leg.y
                                  incident.type = factor(rep(inci.types, length(unique(fatalities.pvf$leg.year))),
                                                         levels = inci.types))
 
+## Pursuit fatalities % (incl active & after, with suicides)
+pct.i <- nrow(incidents.p) / nrow(incidents.all)
 
 ramp <- scales::colour_ramp(c("seashell", "firebrick")) # Colors for incident types
 colors.inci <- ramp(seq(0, 1, length = 3))
