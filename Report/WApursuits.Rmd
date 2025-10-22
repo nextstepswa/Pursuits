@@ -268,7 +268,7 @@ df.reform.vs.rollback <- fatalities.pvf %>%
 
 ```
 
-To compare the fatality rates across the 3 periods we use the simple number of people killed in the same time frames via a "lookback window".  For now, this requires two separate comparisons (pre vs. post-reform, and reform vs. post-rollback) because the length of lookback window for the 2 comparisons is not the same.  Over time the length of the rollback period will catch up to the length of the reform period and all 3 periods will be able to be plotted on a single graph. We also compare estimated annualized rates.  The size of the policy effects depends on the metric used, but the pattern is the same for all metrics:
+To compare the fatality rates across the 3 policy periods we use 2 metrics.  The first is the simple number of people killed in the same time frames via a "lookback window".  For now, this requires two separate comparisons (pre vs. post-reform, and reform vs. post-rollback) because the length of lookback window for the 2 comparisons is not the same.  Over time the length of the rollback period will catch up to the length of the reform period and all 3 periods will be able to be plotted on a single graph. The second is the estimated annualized rates.  While the exact value of the policy effects depends on the metric used, the pattern observed in the data is the same for all metrics:
 
 ____
 
@@ -396,9 +396,9 @@ ____
 
 ## Annualized fatality rates
 
-One can directly compare the three periods by using an estimated annualized fatality rate.  There are benefits and drawbacks to this approach:
+One can compare the three periods directly by using an estimated annualized fatality rate.  There are benefits and drawbacks to this approach:
 
-* *Benefits* -- Using the data to construct annualized rates allows all three periods to be directly compared, rather than the two separate comparisons based on the number of fatalities in identical time periods.  It also allows us to use all of the data from each period, because there is no need to restrict the time frame to a comparable "lookback window".
+* *Benefits* -- Using the data to construct annualized rates does not require the "lookback window".  This allows all three periods to be directly compared, rather than the two separate comparisons based on the number of fatalities in comparable time periods.  It also allows us to use all of the data from each period, because there is no need to restrict the time frame to the comparable "lookback window".
 
 * *Drawbacks* -- In contrast to the number of persons killed in specific known periods, the annualized fatality rate is an *estimate* of the average rate of fatalities per year. The reliability of that estimate depends on the number of years observed.  While we can use monthly values to scale up to yearly totals, the rollback period is still less than 2 years long, so the annualized estimate we get is not yet reliable.  This is also true, to a lesser extent, for the reform period, which lasted only 3 years.  A longer time in place would have given us a better estimate of the annualized rate under the policy reforms.
 
@@ -540,7 +540,7 @@ map
 
 ```
 
-## All pursuits
+## All pursuit-related fatalities
 
 Each marker represents one or more fatalities from an incident that involved a police vehicle pursuit.
 
