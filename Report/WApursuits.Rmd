@@ -1,0 +1,2577 @@
+---
+title: "Pursuits and Fatalities in WA since 2015"
+author: "Next Steps Washington:  Everyone Comes Home Alive"
+date: "Last update: `r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 4
+    code_folding: hide
+    includes:
+      in_header: gtag.wapursuits.html
+---
+
+<base target="_blank"/>
+
+```{r setup, include=FALSE}
+
+# Packages
+library(tidyverse)
+library(ggplot2)
+library(plotly)
+library(kableExtra)
+library(leaflet)
+library(leaflegend)
+library(htmltools)
+library(scales)
+library(icons)
+
+# knitr options
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, fig.width = 8)
+
+# function for plotly 
+# https://stackoverflow.com/questions/59611914/reverse-the-legend-order-when-using-ggplotly
+reverse_legend_labels <- function(plotly_plot) {
+  n_labels <- length(plotly_plot$x$data)
+  plotly_plot$x$data[1:n_labels] <- plotly_plot$x$data[n_labels:1]
+  plotly_plot
+}
+```
+
+```{r data, message=F, warning=F}
+# Data
+## Process starts with clean wa_2015 data
+## Many dfs and plotting helpers constructed in makeWApursuits.R
+
+# Check if need to rebuild clean pursuits data, otherwise load existing file
+
+if(file.exists(here::here("Data", "Clean", "WA_pursuits.rda"))){
+  lastmod.pursuit.data <- file.info(here::here("Data", "Clean", "WA_pursuits.rda"))$mtime
+  lastmod.wa2015 <- file.info("~/GitHub/WA-FEWP/Data/Clean/WA_2015.rda")$mtime
+  lastmod.pursuit.makefile <- file.info(here::here("Construction", "makeWApursuits.R"))$mtime
+
+  
+  if(lastmod.wa2015 > lastmod.pursuit.data | lastmod.pursuit.makefile > lastmod.pursuit.data) {
+    message("Rebuilding pursuit dataset")
+    source(here::here("Construction", "makeWApursuits.R"))
+    
+  } else {
+    message("Loading existing dataset")
+    load(here::here("Data", "Clean", "WA_pursuits.rda"))
+  }
+} else {
+  message("Rebuilding pursuit dataset")
+  source(here::here("Construction", "makeWApursuits.R"))
+}
+
+
+```
+
+```{r summary.dfs, message=F, warning=F}
+
+# Policy period comparisons ---
+# Raw numbers, using date boundaries
+
+## Pursuit vehicular fatalities (includes terminated pursuits) ----
+
+policy.period.pvf <- fatalities.pvf %>%
+  group_by(policy.period) %>%
+  summarize(Subjects = sum(victim == "Subject"),
+            Bystanders = sum(victim == "Bystander"),
+            Passengers = sum(victim == "Passenger"),
+            Officers = sum(victim == "Officer"),
+            Total = n()
+  ) %>%
+  mutate(Period = policy.period)
+
+pre.num.pvf <- policy.period.pvf$Total[policy.period.pvf$Period == "pre"]
+reform.num.pvf <- policy.period.pvf$Total[policy.period.pvf$Period == "reform"]
+rollback.num.pvf <- policy.period.pvf$Total[policy.period.pvf$Period == "rollback"]
+
+## All pursuit fatalities (includes homicides and suicides) ----
+
+policy.period.apf <- fatalities.apf %>%
+  group_by(policy.period) %>%
+  summarize(Subjects = sum(victim == "Subject"),
+            Bystanders = sum(victim == "Bystander"),
+            Passengers = sum(victim == "Passenger"),
+            Officers = sum(victim == "Officer"),
+            Total = n()
+  ) %>%
+  mutate(Period = policy.period)
+
+pre.num.apf <- policy.period.apf$Total[policy.period.apf$Period == "pre"]
+reform.num.apf <- policy.period.apf$Total[policy.period.apf$Period == "reform"]
+rollback.num.apf <- policy.period.apf$Total[policy.period.apf$Period == "rollback"]
+
+
+# Pre-post REFORM legislation comparisons ----
+# Uses the pre-reform lookback window for comparison, now fixed at 1046 days
+
+## Pursuit vehicular fatalities (includes terminated pursuits) ----
+
+pre.post.reform.pvf <- fatalities.pvf %>%
+  filter(date > date.pre.reform.window & date < date.rollback) %>%
+  group_by(policy.period) %>%
+  summarize(Subjects = sum(victim == "Subject"),
+            Bystanders = sum(victim == "Bystander"),
+            Passengers = sum(victim == "Passenger"),
+            Officers = sum(victim == "Officer"),
+            Total = n()
+            ) %>%
+  mutate(Period = factor(ifelse(policy.period=="pre", "Pre-reform", "Post-reform"),
+                         levels = c("Pre-reform", "Post-reform"))
+         )
+
+pre.reform.num.pvf <- pre.post.reform.pvf$Total[pre.post.reform.pvf$policy.period == "pre"]
+pct.change.post.reform.pvf <- reform.num.pvf/pre.reform.num.pvf - 1
+
+
+## After Pursuit fatalities (includes homicides and suicides) ----
+
+pre.post.reform.apf <- fatalities.apf %>%
+  filter(date > date.pre.reform.window & date < date.rollback) %>%
+  group_by(policy.period) %>%
+  summarize(Subjects = sum(victim == "Subject"),
+            Bystanders = sum(victim == "Bystander"),
+            Passengers = sum(victim == "Passenger"),
+            Officers = sum(victim == "Officer"),
+            Total = n()
+            ) %>%
+  mutate(Period = factor(ifelse(policy.period=="pre", "Pre-reform", "Post-reform"),
+                         levels = c("Pre-reform", "Post-reform"))
+         )
+
+pre.reform.num.apf <- pre.post.reform.apf$Total[pre.post.reform.apf$policy.period == "pre"]
+pct.change.post.reform.apf <- reform.num.apf/pre.reform.num.apf - 1
+
+# Pre-post ROLLBACK legislation comparisons ----
+# Uses the rollback date lookback window for comparison, which updates continuously
+
+## Pursuit vehicular fatalities (includes terminated pursuits) ----
+
+pre.post.rollback.pvf <- fatalities.pvf %>%
+  filter(date > date.pre.rollback.window) %>%
+  group_by(policy.period) %>%
+  summarize(Subjects = sum(victim == "Subject"),
+            Bystanders = sum(victim == "Bystander"),
+            Passengers = sum(victim == "Passenger"),
+            Officers = sum(victim == "Officer"),
+            Total = n()
+            ) %>%
+  mutate(Period = factor(ifelse(policy.period=="reform", "Pre-rollback", "Post-rollback"),
+                         levels = c("Pre-rollback", "Post-rollback"))
+         )
+
+pre.rollback.num.pvf <- pre.post.rollback.pvf$Total[pre.post.rollback.pvf$policy.period == "reform"]
+pct.change.post.rollback.pvf <- rollback.num.pvf/pre.rollback.num.pvf - 1
+
+
+## After Pursuit fatalities (includes homicides and suicides) ----
+
+pre.post.rollback.apf <- fatalities.apf %>%
+  filter(date > date.pre.rollback.window) %>%
+  group_by(policy.period) %>%
+  summarize(Subjects = sum(victim == "Subject"),
+            Bystanders = sum(victim == "Bystander"),
+            Passengers = sum(victim == "Passenger"),
+            Officers = sum(victim == "Officer"),
+            Total = n()
+            ) %>%
+  mutate(Period = factor(ifelse(policy.period=="reform", "Pre-rollback", "Post-rollback"),
+                         levels = c("Pre-rollback", "Post-rollback"))
+         )
+
+pre.rollback.num.apf <- pre.post.rollback.apf$Total[pre.post.rollback.apf$policy.period == "reform"]
+pct.change.post.rollback.apf <- rollback.num.apf/pre.rollback.num.apf - 1
+
+
+# Breakdowns by agency and county
+# (not enough cases to support analysis, so the code is there but we won't use it)
+#source("Analysis/pre.post.agency.county.R")
+
+```
+
+# Introduction {.tabset}
+
+This report examines fatalities associated with vehicle pursuits by law enforcement in WA State since 2015. 
+
+Pursuits are unique among police tactics in their risk of collateral damage.  Nationally, about one-third of pursuits lead to vehicular accidents, and a substantial fraction (over a third) of those injured or killed in these accidents are uninvolved bystanders, passengers and officers.  
+
+Here in Washington state, recent legislative changes provide an opportunity to observe whether pursuit policies can help to reduce these fatalities.
+
+## What this report covers
+
+The report examines the range of fatalities that are associated with police vehicular pursuits:
+
+* "Pursuit vehicular fatalities" - an active or recently terminated vehicular pursuit led to a vehicular homicide caused by one of the cars involved in the pursuit.
+
+* "After pursuit fatalities" -- a pursuit was involved earlier in the incident, but had ended by the time the fatality occurred.  Typically the person killed in these cases is the fleeing subject who is shot by police at the end of the chase.
+
+* "Attempted stop fatalities" -- a subject fled an attempted stop by police and committed a vehicular homicide in the process, but the police vehicle did not engage in pursuit.
+
+The majority of the report focuses on the first two types: pursuit vehicular fatalities and after pursuit fatalities, examined separately.  The attempted stop fatalities are different for several reasons, so we address them in a [section of their own](#attempted-stops).
+
+## How the report is organized
+
+The table of contents on the left shows the outline of the information.  All of the entries are linked and can be used to navigate through the report.  Note that clicking on an entry of the TOC will cause the sub-headings to display if there are any.  
+
+Within each section of the report listed in the TOC, you may find "tabs" on the page that contain additional information.  The active tab is highlighted with a blue filled box, and you can click the inactive tabs on either side of the active tab to access their information.
+
+The graphics use a consistent color coding to help with comparisons, and the color scheme is linked to the type of data in the graph:  pursuit vehicular fatalities (color codes for victim type), after pursuit fatalities (color codes for homicide vs. suicide), and incidents (color codes for pursuit vehicular fatalities and after pursuit fatalities).
+
+# Legislative history {.tabset}
+
+Pursuit policy has been an active area of legislation in WA State, with parallels to the policy changes that took place in [Milwaukee, WI](https://city.milwaukee.gov/fpc/Reports/ReportsonMPD/Vehicle-Pursuit-Reports.htm).  The changes define three policy periods in WA state useful for comparative analysis:
+
+## "Pre-reform": before July 25, 2021
+
+  Pursuit policies during this period were decentralized, and established by each agency, so there was a patchwork of different policies across the state.  Some policies were quite restrictive, others left decisions to the discretion of officers.  In this report, we look back to Jan 1, 2015 as the start of this observation period.
+
+## "Reform":  July 25, 2021 - June 5, 2024
+
+  In 2021 the legislature enacted a statewide policy to provide a uniform standard and to improve public safety by reducing the growing number of people killed during these pursuits ([House Bill 1054](https://app.leg.wa.gov/billsummary?BillNumber=1054&Year=2021&Initiative=false), effective July 25, 2021).  At the time, pursuits were responsible for 10-20% of the fatalities from police activities each year. About half of those killed were passengers, officers or uninvolved bystanders. 
+
+  HB 1054 established a clear standard for balancing the danger posed to the public by the pursuit against the danger posed by a fleeing subject.  It prioritized public safety: police are allowed to engage in pursuits when there is a well established threat to public safety – violent offenses (like carjackings, armed robberies), sex offenses, DUIs, and prison escapes – but not for misdemeanors or property crimes.  It required that the evidence of the threat meets the "probable cause" standard -- the same standard required to make an arrest.  In effect the law said:  If you don't have enough evidence to arrest the person, then you can not justify the risk to public safety for this pursuit.  
+
+  In 2023 the legislature [modified the policy](https://app.leg.wa.gov/billsummary?BillNumber=5352&Year=2023), lowering the standard of evidence required from probable cause to reasonable suspicion, adding vehicular and domestic assaults explicitly to the list of offenses eligible for pursuit, and removing the requirement for supervisory authorization.  These changes took effect May 3, 2023.  This was a relatively modest change, so we do not consider it a separate period.
+
+## "Rollback": after June 5, 2024
+
+  In response to a successful initiative campaign in 2023 to place a pursuit policy rollback on the November 2024 ballot, the legislature took the option of passing [the initiative](https://lawfilesext.leg.wa.gov/biennium/2023-24/Pdf/Initiatives/Initiatives/INITIATIVE%202113.SL.pdf?q=20241017145635) themselves in March 2024.  The initiative removed all of the explicit public safety requirements for allowable pursuits, and replaced them with a simple discretionary requirement that "the threat to the safety of others and the safety risks of failing to apprehend or identify the person are considered to be greater than the safety risks of the vehicular pursuit under the circumstances."
+
+The full texts of the bills passed and the current law (RCW) on vehicle pursuits can be found in the [Pursuit legislation](#pursuit-legislation) section at the end of this report.
+
+# Impact of policy changes {.tabset}
+
+```{r policy.impact.data, message=F, warning=F}
+df.pre.vs.reform <- fatalities.pvf %>%
+  filter(date > date.pre.reform.window & date < date.rollback) %>%
+  mutate(Period = factor(ifelse(policy.period=="pre", 
+                                "Pre-reform", "Reform"),
+                         levels = c("Pre-reform", "Reform"))
+         ) %>%
+  select(Period, Group=victim) 
+
+
+df.reform.vs.rollback <- fatalities.pvf %>%
+  filter(date > date.pre.rollback.window) %>%
+  mutate(Period = factor(ifelse(policy.period=="reform", 
+                                "Reform", "Post-rollback"),
+                         levels = c("Reform", "Post-rollback"))
+         ) %>%
+  select(Period, Group=victim) 
+
+
+
+
+```
+
+To compare the fatality rates across the 3 periods we use the simple number of people killed in the same time frames via a "lookback window".  For now, this requires two separate comparisons (pre vs. post-reform, and reform vs. post-rollback) because the length of lookback window for the 2 comparisons is not the same.  Over time the length of the rollback period will catch up to the length of the reform period and all 3 periods will be able to be plotted on a single graph. We also compare estimated annualized rates.  The size of the policy effects depends on the metric used, but the pattern is the same for all metrics:
+
+____
+
+> The data suggest that the WA statewide pursuit policy reform adopted in 2021 was working as intended to improve public safety: it was saving lives.
+
+____
+
+
+The pattern here in WA mirrors what happened in Milwaukee, WI before, during and after the 5 years that their policy restricted pursuits to violent offenses (see the official City of Milwaukee pursuit reports  [here](https://city.milwaukee.gov/fpc/Reports/ReportsonMPD/Vehicle-Pursuit-Reports.htm)). 
+
+
+## Pre vs. Post Reform
+
+For pre vs. post-reform the lookback window is determined by the full length of the reform period: `r days.reform` days, about `r round(days.reform/365, 1)` years. Using this metric, the number of people killed during pursuits dropped by `r scales::percent(-pct.change.post.reform.pvf)` during the reform period.
+
+An equivalent way to say this is that there were 
+`r scales::percent(pre.reform.num.pvf/reform.num.pvf - 1)` more people killed during the same period before the policy reforms.
+
+```{r reform.impact.intro}
+
+yval <- pre.post.reform.pvf$Total[nrow(pre.post.reform.pvf)] + 0.5
+txt <- paste(scales::percent(-pct.change.post.reform.pvf),
+                        "fewer people killed")
+
+pre.vs.reform.plot <- ggplot(df.pre.vs.reform, 
+                  aes(x=Period, fill=Group)) +
+  
+  geom_bar(alpha = 0.8) +
+  
+  annotate("text",
+           x = 2, y = yval,
+           label = txt,
+           size = 3) +
+  
+  scale_y_continuous(breaks = 0:max(pre.post.reform.pvf$Total)) +
+  scale_x_discrete(breaks=levels(df.pre.vs.reform$Period),
+                   labels=c(
+                     paste0(
+                       "Pre-reform \n",
+                       format(date.pre.reform.window, "%m/%d/%y"), " - ",
+                       format(date.reform-1, "%m/%d/%y")),
+                     paste0(
+                       "Post-reform \n",
+                       format(date.reform, "%m/%d/%y"), " - ",
+                       format(date.rollback-1, "%m/%d/%y"))
+                  )) +
+
+  scale_fill_manual(values = cols.pvf.4) +
+
+  
+  labs(title = "Persons killed in vehicular pursuits: pre vs. post reform",
+       x = paste0("Comparable Period \n(", 
+                  days.reform, " days each for pre and post reform)"),
+       y = "Number",
+       fill = "Person killed")
+  
+  
+ggplotly(pre.vs.reform.plot) %>% reverse_legend_labels()
+
+```
+
+
+The graph shows the number of people killed in equivalent time periods before and after the 2021 pursuit policy change.
+The total time covered by this comparison is about 
+`r round(as.numeric((2*days.reform)/365))` years, 
+with half before and half after the reform. The pursuit fatalities include all known incidents where an active or recently terminated vehicular pursuit led to a vehicular homicide.
+
+____
+
+## Reform vs. Post Rollback
+
+For reform vs. post-rollback the lookback window is determined by the current length of the post-rollback period: `r days.rollback` days, about `r round(days.rollback/365, 1)` years.  Since the reforms were rolled back, the number of pursuit-related fatalities has risen sharply. As of the date of this report, `r rollback.num.pvf` people have been killed since the rollback of pursuit safety restrictions.  *This is not only more than the number killed during the comparable reform period time frame, it is more than during the entire reform period.*
+
+```{r rollback.impact.intro}
+
+yval <- pre.post.rollback.pvf$Total[nrow(pre.post.rollback.pvf)] + 0.5
+txt <- paste(scales::percent(pct.change.post.rollback.pvf),
+                        "more people killed")
+
+reform.vs.rollback.plot <- ggplot(df.reform.vs.rollback, 
+                  aes(x=Period, fill=Group)) +
+  
+  geom_bar(alpha = 0.8) +
+  
+  annotate("text",
+           x = 2, y = yval,
+           label = txt,
+           size = 3) +
+  
+  scale_y_continuous(breaks = 0:max(pre.post.rollback.pvf$Total)) +
+    scale_x_discrete(breaks=levels(df.reform.vs.rollback$Period),
+                   labels=c(
+                     paste0(
+                       "Pre-rollback \n",
+                       format(date.pre.rollback.window, "%m/%d/%y"), " - ",
+                       format(date.rollback-1, "%m/%d/%y")),
+                     paste0(
+                       "Post-rollback \n",
+                       format(date.rollback, "%m/%d/%y"), " - ",
+                       format(today, "%m/%d/%y"))
+                  )) +
+
+  scale_fill_manual(values = cols.pvf.4) +
+
+  
+  labs(title = "Persons killed in vehicular pursuits: Reform period vs. post rollback",
+       x = paste0("Comparable Period \n(", 
+                  days.rollback, " days each for pre and post rollback as of the date of this report: ",
+                  format(Sys.Date(), format="%B %d, %Y"),
+                  ")"),
+       y = "Number",
+       fill = "Person killed")
+  
+  
+ggplotly(reform.vs.rollback.plot) %>% reverse_legend_labels()
+
+```
+
+This graph shows the number of people killed in equivalent time periods before and after the 2024 pursuit policy rollback.
+The total time covered by this comparison is now about 
+`r round(as.numeric((2*days.rollback)/30))` months, 
+with half before and half after the rollback. The pursuit fatalities include all known incidents where an active or recently terminated vehicular pursuit led to a vehicular homicide.
+
+____
+
+## Annualized fatality rates
+
+One can directly compare the three periods by using an estimated annualized fatality rate.  There are benefits and drawbacks to this approach:
+
+* *Benefits* -- Using the data to construct annualized rates allows all three periods to be directly compared, rather than the two separate comparisons based on the number of fatalities in identical time periods.  It also allows us to use all of the data from each period, because there is no need to restrict the time frame to a comparable "lookback window".
+
+* *Drawbacks* -- In contrast to the number of persons killed in specific known periods, the annualized fatality rate is an *estimate* of the average rate of fatalities per year. The reliability of that estimate depends on the number of years observed.  While we can use monthly values to scale up to yearly totals, the rollback period is still less than 2 years long, so the annualized estimate we get is not yet reliable.  This is also true, to a lesser extent, for the reform period, which lasted only 3 years.  A longer time in place would have given us a better estimate of the annualized rate under the policy reforms.
+
+Keeping this in mind, the annualized fatality rates for the 3 policy periods, and the numbers used to construct the estimate, are shown in the table below.
+
+```{r annualized.rates, message=F, warning=F}
+
+monthly_df <- fatalities.pvf %>%
+  group_by(year, month) %>%
+  summarize(num.fatalities = n(),
+            policy.period.incident = first(policy.period)) %>%
+  left_join(index.monthly, .,
+            by = join_by("year"=="year", "mon"=="month")) %>%
+  mutate(policy.period = case_when(
+    index.date < date.reform ~ "pre-reform",
+    (index.date >= date.reform & index.date < date.rollback) ~ "reform",
+    index.date >= date.rollback ~ "rollback")
+  )
+
+monthly_df %>%
+  group_by(policy.period) %>%
+  summarize(
+    fatalities = sum(num.fatalities, na.rm=T)
+  ) %>%
+  mutate(months = case_when(
+    policy.period == "pre-reform" ~ round(as.numeric(days.pre)/30, 1),
+    policy.period == "reform" ~ round(as.numeric(days.reform)/30, 1),
+    policy.period == "rollback" ~ round(as.numeric(days.rollback)/30, 1)
+    )
+  ) %>%
+  mutate(monthly.rate = round(fatalities/months, 2),
+         annualized.rate = round(monthly.rate*12, 1) 
+         ) %>%
+ 
+  kbl(caption = "Annualized pursuit fatality rates by policy period",
+      align = "lrrrr") %>%
+  kable_styling(bootstrap_options = "striped") %>%
+  add_footnote("Includes fatalities from active and recently terminated pursuits only.",
+               notation = "none")
+
+```
+
+
+
+
+# Interactive Maps {.tabset .tabset-pills}
+
+The first map is restricted to pursuit vehicular fatalities only.
+
+The second map adds in after pursuit fatalities.
+
+## Pursuit vehicular fatalities
+
+Each marker represents an active vehicle pursuit that ended with a vehicular homicide.
+
+* Red markers are pursuits that resulted in bystanders, passengers and/or officers (B/P/O) being killed or injured.
+
+* Blue markers are pursuits with subject fatalities only
+
+* The icon inside the marker shows whether this was a single or multiple fatality incident.
+
+This map is also interactive:
+
+* _Hovering_ over the pointer brings up the number of people killed and injured, the law enforcement agency involved, and the date of the incident; 
+
+* _Clicking_ the pointer will bring up a url to a news article on the incident.
+
+```{r map.ap}
+
+# Make icons for single/multiple fatality incidents
+
+# color = incident type for map:
+## red = ap with any pb killed, 
+## blue = ap with subject killed, 
+# icon = number killed (single/multiple)
+
+iconset <- awesomeIconList(
+  single = makeAwesomeIcon(
+    icon = 'user',
+    library = 'fa',
+    iconColor = 'white',
+    markerColor = ~ inci.mapcolor
+  ),
+  mult = makeAwesomeIcon(
+    icon = 'users',
+    library = 'fa',
+    iconColor = 'white',
+    markerColor = ~ inci.mapcolor
+  ))
+
+iconset.legend <- awesomeIconList(
+  `B/P/O killed` = makeAwesomeIcon(
+    icon = 'user',
+    library = 'fa',
+    iconColor = 'black',
+    markerColor = 'red',
+  ),
+  `Subject killed` = makeAwesomeIcon(
+    icon = 'user',
+    library = 'fa',
+    iconColor = 'black',
+    markerColor = 'blue',
+  ),
+  `Multiple fatalities` = makeAwesomeIcon(
+    icon = 'users',
+    library = 'fa',
+    iconColor = 'black',
+    markerColor = 'white',
+  ))
+
+labs <- with(incidents.pvf, 
+              as.character(paste("fatalities:", 
+                                 fatalities, '<br>',
+                                 "injuries:",
+                                 total.injuries, '<br>',
+                                 'by', agency, '<br>',
+                                 'date: ', format(date, format="%m/%d/%y"))))
+
+map <- leaflet(
+  data = incidents.pvf, 
+  width = "100%") %>% 
+  addTiles() %>%
+  
+  addAwesomeMarkers( ~ long, ~ lat,
+                    popup = ~ url_click,
+                    label = lapply(labs, htmltools::HTML),
+                    icon = ~iconset[inci.mapmult]) %>%
+  
+  addLegendAwesomeIcon(iconSet = iconset.legend,
+                       orientation = 'vertical',
+                       title = htmltools::tags$div(
+                         style = 'font-size: 10px;',
+                         'Incident type'),
+                       labelStyle = 'font-size: 8px;') %>%
+  
+  leaflet.extras::addResetMapButton()
+map
+
+
+```
+
+## All pursuits
+
+Each marker represents one or more fatalities from an incident that involved a police vehicle pursuit.
+
+* Red markers are pursuits that resulted in officers, bystanders and/or passengers being killed.
+
+* Blue markers are pursuits with subject fatalities only.
+
+* Green markers are after pursuit homicides -- the person was killed after the pursuit ended.
+
+* Beige markers are after pursuit suicides -- the person took their own life after the pursuit ended.
+
+* The icon in the marker shows whether this was a single or multiple fatality incident.
+
+This map is interactive:
+
+* _Hovering_ over the pointer brings up the number of people killed and injured, the law enforcement agency involved, and the date of the incident; 
+
+* _Clicking_ the pointer will bring up a url to a news article on the incident.
+
+```{r map.allp}
+
+# Make icons for single/multiple fatality incidents
+
+# color = incident type for map:
+## red = ap with pb killed/injured, 
+## blue = ap with only suspect killed, 
+## green = After pursuit homicide (suspect killed)
+## yellow = After pursuit suicide
+
+
+# icon = number killed (single/multiple)
+
+iconset <- awesomeIconList(
+  single = makeAwesomeIcon(
+    icon = 'user',
+    library = 'fa',
+    iconColor = 'white',
+    markerColor = ~ inci.mapcolor
+  ),
+  mult = makeAwesomeIcon(
+    icon = 'users',
+    library = 'fa',
+    iconColor = 'white',
+    markerColor = ~ inci.mapcolor
+  ))
+
+iconset.legend <- awesomeIconList(
+  `Pursuit fatality, P/O/B` = makeAwesomeIcon(
+    icon = 'user',
+    library = 'fa',
+    iconColor = 'black',
+    markerColor = 'red',
+  ),
+  `Pursuit fatality, Subject` = makeAwesomeIcon(
+    icon = 'user',
+    library = 'fa',
+    iconColor = 'black',
+    markerColor = 'blue',
+  ),
+  `After pursuit homicide` = makeAwesomeIcon(
+    icon = 'user',
+    library = 'fa',
+    iconColor = 'black',
+    markerColor = 'green',
+  ),
+    `After pursuit suicide` = makeAwesomeIcon(
+    icon = 'user',
+    library = 'fa',
+    iconColor = 'black',
+    markerColor = 'beige',
+  ),
+  `Multiple fatalities` = makeAwesomeIcon(
+    icon = 'users',
+    library = 'fa',
+    iconColor = 'black',
+    markerColor = 'white',
+  ))
+
+labs <- with(incidents.p, 
+              as.character(paste("fatalities:", 
+                                 fatalities, '<br>',
+                                 "injuries:",
+                                 total.injuries, '<br>',
+                                 'by', agency, '<br>',
+                                 'date: ', format(date, format="%m/%d/%y"))))
+
+map <- leaflet(data = incidents.p, width = "100%") %>% 
+  addTiles() %>%
+  
+  addAwesomeMarkers( ~ long, ~ lat,
+                    popup = ~ url_click,
+                    label = lapply(labs, htmltools::HTML),
+                    icon = ~iconset[inci.mapmult]) %>%
+  
+  addLegendAwesomeIcon(iconSet = iconset.legend,
+                       orientation = 'vertical',
+                       title = htmltools::tags$div(
+                         style = 'font-size: 10px;',
+                         'Incident type'),
+                       labelStyle = 'font-size: 8px;') %>%
+  
+  leaflet.extras::addResetMapButton()
+map
+
+
+```
+
+____
+
+# Pursuit Statistics
+
+Pursuit statistics can be counted in two ways:
+
+* Number of people killed ("fatalities")
+
+* Number of incidents
+
+Since more than one person may be killed in an incident the number of incidents will generally be smaller than the number of people killed.  Fatalities are a better metric for understanding who is at risk from pursuits.  Incidents are a better metric for understanding the agencies involved.  We look at both below.
+
+## People killed
+
+### Summary {.tabset .tabset-pills}
+
+#### How often are pursuits involved?
+
+____
+
+> Pursuits are involved in `r scales::percent(pct.i.p)` of the fatal police encounters since 2015.
+
+____
+
+The table below breaks down these fatal incidents by context -- if and how a pursuit was involved.  The categories are:
+
+* *Vehicle not involved* -- No indication that a vehicle-related fatality was involved in the incident that led to this fatality.
+
+* *After pursuit fatality* -- A vehicle pursuit occurred during the incident, but was not the immediate cause of the fatality.  Most of these cases are gun-related fatalities
+(`r scales::percent(pct.shot.apf)` are either shot by police or die of a self-inflicted gunshot, the homicides and suicides are reported separately in the table below) the rest are fatalities from vehicle accidents.
+
+* *Pursuit vehicular fatality* -- A pursuit led directly to a vehicular fatality (e.g., a crash or someone getting run over).
+
+* *Attempted stop* -- The subject fled a traffic stop and a vehicular fatality resulted, but police report they did not engage in pursuit.
+
+* *Vehicle accident* -- An on-duty officer commits a vehicular homicide, but there is no pursuit involved.
+
+```{r inci.all.type}
+tab <- incidents.all %>%
+  mutate(Incident.Type = if_else(grepl("All other", incident.type), "Vehicle not involved", incident.type)
+         ) %>%
+  group_by(Incident.Type) %>%
+  summarize(Number = n()) %>%
+  mutate(Percent = Number/sum(Number)) %>%
+  arrange(desc(Number)) %>%
+  bind_rows(data.frame(Incident.Type ="Total",
+                       Number = sum(.$Number),
+                       Percent = sum(.$Percent))) %>%
+  mutate(Percent = scales::percent(Percent, acc=0.1))
+
+tab %>%    
+  kbl(caption = "Incidents with fatalities during police encounters:  WA since 2015*",
+      align = "lrr") %>%
+  pack_rows("Lethal force", 1, 1) %>%
+  pack_rows("Pursuit Related", 2, 4) %>%
+  pack_rows("Other vehicular incident", 5, 6) %>%
+  kable_styling(bootstrap_options = "striped") %>%
+  row_spec(which(tab$Incident.Type == "Total"), bold=T) %>%
+  
+  add_footnote("Table data include all incidents in which a person was killed during a police encounter.  Incidents may have multiple fatalities, so the number of incidents will be less then the number of fatalities.  See Data section for information on data sources and coding.",
+               notation = "symbol")
+```
+
+____
+
+#### How many people are killed in pursuit-related accidents?
+
+____
+
+> Pursuit-related accidents account for about
+`r scales::percent(pct.pvf)` of all persons killed during police encounters.
+They are the second leading cause of death from police activities.
+
+____
+
+The table below breaks down all the cause of death for all persons killed during an encounter with law enforcement since 2015. After pursuit vehicular fatalities, the two next most common causes of death are shown.  The remaining causes are all less common and grouped together.
+
+
+```{r fatalities.all.cod}
+tab <- fatalities.all %>%
+  mutate(cod.cat = factor(case_when(
+    incident.type == "Pursuit vehicular fatality" ~ "Pursuit vehicular fatality",
+    cod == "Gunshot" ~ "Gunshot",
+    cod == "Taser" ~ "Taser", 
+    grepl("Asphyx", cod)  ~ "Asphyxiated/Restrained",
+    TRUE ~ "All other causes"),
+    levels = c("Gunshot", "Pursuit vehicular fatality", 
+               "Taser", "Asphyxiated/Restrained",
+               "All other causes"))
+  ) %>%
+  group_by(cod.cat) %>%
+  summarize(Number = n()) %>%
+  mutate(Percent = Number/sum(Number)) %>%
+  bind_rows(data.frame(cod.cat ="Total",
+                       Number = sum(.$Number),
+                       Percent = sum(.$Percent))) %>%
+  mutate(Percent = scales::percent(Percent, acc = 0.1)) %>%
+  rename(`Cause of Death` = cod.cat) 
+
+tab %>%
+  kbl(caption = "Persons killed by police in WA since 2015: By cause of death",
+      align = "lrr") %>%
+  kable_styling(bootstrap_options = "striped") %>%
+  row_spec(which(tab$"Cause of Death" == "Total"), bold=T) %>%
+  
+  footnote("All other causes includes beaten, tasered, accident etc.")
+```
+
+____
+
+#### Who gets killed?
+
+____
+
+> `r scales::percent(1-pct.subject.pvf)` of the persons killed during pursuits since 2015 in WA have been passengers, officers or uninvolved bystanders.
+
+____
+
+
+
+```{r pvf.victim}
+tab <- fatalities.pvf %>%
+  group_by(Victim=victim) %>%
+  summarize(Number = n()) %>%
+  mutate(Percent = Number/sum(Number)) %>%
+  arrange(desc(Number)) %>%
+  bind_rows(data.frame(Victim ="Total",
+                       Number = sum(.$Number),
+                       Percent = sum(.$Percent))) %>%
+  mutate(Percent = scales::percent(Percent),
+        Victim = factor(Victim, 
+                         levels = c("Subject", "Bystander", "Passenger",
+                                    "Officer", "Total"))) 
+
+tab %>%
+  arrange(Victim) %>%
+  
+  kbl(caption = "Victims of vehicular pursuits in WA since 2015",
+      digits = c(0,0,1),
+      align = "lrr") %>%
+  kable_styling(bootstrap_options = "striped") %>%
+  row_spec(which(tab$Victim == "Total"), bold=T) %>%
+  
+  footnote("See Data section for information on data sources and coding.")
+```
+
+____
+
+### Trend over time {.tabset .tabset-pills}
+
+There are several ways we can examine the data over time.  Some are better suited to revealing the impact of the policy change than others.  We do not construct a monthly rate measure -- fatalities per month -- because the small counts (and few number of months in some periods) cannot support a monthly estimate.  Instead, we work with the raw count of persons killed, and present these using different time units for aggregation.
+
+
+* *Pre vs. post comparable policy period:*  This is the the clearest "apples to apples" comparison.  It shows the number of people killed *in equivalent time periods* before and after the law was changed.  It is the closest analog to a standardized rate.  But because the 3 policy periods have different lengths, the comparisons need to be done in pairs (pre-post reform, pre-post rollback), so we need 2 plots to show these.  These are the plots shown at the [top of the report](#impact).
+
+* *Policy period:*  This is a simple count of fatalities in each period, so is easy to understand and plot in a single graphic, but because the periods represent different lengths of time (`r days.pre` days pre-reform, `r days.reform` days during reform and `r days.rollback` days since the rollback), direct comparisons are misleading. 
+
+* *Calendar year:*  This is a common way to aggregate the fatality counts into standardized time units in a single graphic, but it does not give a  clear picture of the policy impacts because the laws changed in the middle of 2021, the middle of 2023, and the middle of 2024.  
+
+* *Legislative year:* Aggregating the fatality counts into standardized legislative years does a somewhat better job of showing the policy impacts, but is still not accurate because while the standardized years mean that all years have the same number of days, the true legislative years vary in length, so the standardized years don't perfectly line up with when legislation becomes effective.  
+
+For both Calendar and Legislative year plots, the current year shows the year to date (YTD) count, so it is not strictly comparable to previous years.  The YTD count may rise by the end of the year but it will not decline.  As a result increases from previous years to the current YTD are meaningful but potentially under-estimate the difference, while declines observed from previous years to the current YTD are not meaningful since this year's total is not complete.
+
+The pre vs. post plots are shown at the [top of the report](#impact), the others are shown below for information but should be interpreted with care.
+
+#### Policy period {.tabset .tabset-pills}
+
+The key changes to statewide pursuit law went into effect `r format(date.reform, format="%B %d, %Y")` and
+`r format(date.reform, format="%B %d, %Y")`.  This divides our observation period into three parts:  pre-reform, reform and rollback.  
+
+Note that the lengths of the periods are quite different (`r days.pre` days pre-reform, `r days.reform` days during reform and `r days.rollback` days since the rollback), so direct comparisons of the counts are misleading. 
+
+##### Pursuit vehicular fatalities
+
+The plot below displays the number of people killed in each period, broken down by the status of the victim.  
+
+* *Hovering* over the bars will bring up number of persons killed for each segment of the bar.
+
+
+```{r pvf.policyperiod, message=F, warning=F}
+
+df <- fatalities.pvf %>%
+  group_by(policy.period, Victim=victim) %>%
+  summarize(Number = n()) %>%
+  group_by(policy.period) %>%
+  mutate(Total = sum(Number))
+
+ymax <- max(df$Total)
+
+p <- ggplot(df, aes(x=policy.period, y=Number, 
+                    fill = Victim)) +
+  geom_bar(stat = "identity", color="grey", alpha = 0.8) +
+  
+  annotate("text",
+           x = 3,
+           y = df$Total[nrow(df)] + 1,
+           label = "Period to date", size = 3) +
+  
+  labs(title = "Persons killed in vehicular pursuits by policy period (non-comparable period lengths)",
+       x = "Policy Period",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.pvf.4) +
+  
+  scale_y_continuous(breaks = 0:(ymax + 2))  +
+  scale_x_discrete(breaks=unique(df$policy.period),
+                   labels=c(
+                     paste0(
+                       "Pre-reform \n",
+                       format(date.start, "%m/%d/%y"), " - ",
+                       format(date.reform-1, "%m/%d/%y"), "\n",
+                       round(as.numeric(days.pre)/30), " months"),
+                     paste0(
+                       "Reform \n",
+                       format(date.reform, "%m/%d/%y"), " - ",
+                       format(date.rollback - 1, "%m/%d/%y"), "\n",
+                       round(as.numeric(days.reform)/30), " months"),
+                     paste0(
+                       "Rollback \n",
+                       format(date.rollback, "%m/%d/%y"), " - ",
+                       format(today, "%m/%d/%y"), "\n",
+                       round(as.numeric(days.rollback)/30), " months")
+                   )
+  )
+  
+
+ggplotly(p) %>% reverse_legend_labels()
+
+```
+
+____
+
+##### After pursuit fatalities
+
+This graph shows only the "after pursuit" fatalities:  incidents where there has been a pursuit, but the death occurs after the pursuit ended.  These include both homicides and suicides following a pursuit, and the number of each is shown in the bars.  Most of these deaths are caused by gunshot.
+
+* *Hovering* over the bars will bring up number of persons killed for each bar segment.
+
+```{r apf.policyperiod, message=F, warning=F}
+
+df <- fatalities.apf %>%
+  group_by(incident.type, policy.period) %>%
+  summarize(Number = n()) %>%
+  mutate(Fatality = factor(ifelse(grepl("suicide", incident.type), "Suicide", "Homicide"),
+                           levels = c("Suicide", "Homicide"))) %>%
+  group_by(policy.period) %>%
+  mutate(Total = sum(Number))
+
+p <- ggplot(df, aes(x=policy.period, y=Number, 
+                    fill = Fatality)) +
+  
+  geom_bar(stat = "identity", color="grey", alpha = 0.8) +
+  
+  annotate("text",
+           x = length(unique(df$policy.period)),
+           y = df$Total[nrow(df)] + 1,
+           label = "Period to date", size = 3) +
+  
+  labs(title = "Fatalities after vehicle pursuits by policy period (non-comparable period lengths)",
+       x = "Policy period",
+       y = "Number")  +
+
+  scale_y_continuous(breaks = seq(0, (max(df$Total) + 2), 5))   +
+  scale_x_discrete(breaks=unique(df$policy.period),
+                   labels=c(
+                     paste0(
+                       "Pre-reform \n",
+                       format(date.start, "%m/%d/%y"), " - ",
+                       format(date.reform-1, "%m/%d/%y"), "\n",
+                       round(as.numeric(days.pre)/30), " months"),
+                     paste0(
+                       "Reform \n",
+                       format(date.reform, "%m/%d/%y"), " - ",
+                       format(date.rollback - 1, "%m/%d/%y"), "\n",
+                       round(as.numeric(days.reform)/30), " months"),
+                     paste0(
+                       "Rollback \n",
+                       format(date.rollback, "%m/%d/%y"), " - ",
+                       format(today, "%m/%d/%y"), "\n",
+                       round(as.numeric(days.rollback)/30), " months")
+                   )
+  ) +
+  
+  scale_fill_manual(values = c("gold2", "steelblue4"))
+
+
+ggplotly(p) %>% reverse_legend_labels()
+
+```
+
+____
+
+#### Calendar year {.tabset .tabset-pills}
+
+This is a common way to aggregate the fatality counts into standardized time units in a single graphic, but it does not give a  clear picture of the policy impacts because the laws changed in the middle of 2021 and the middle of 2024.  
+
+Note that the current year shows the count for the year to date (YTD) --
+January 1 - `r format(Sys.Date(), format="%B %d, %Y")` --
+so it is not strictly comparable to the other years.  The YTD count may rise, but it will not decline.  As a result increases from previous years to the current YTD are meaningful but potentially under-estimate the difference, while declines observed from previous years to the current YTD are not meaningful since this year's total is not complete.
+
+##### Pursuit vehicular fatalities
+
+The plot below displays the number of people killed in each period, broken down by the status of the victim.  
+
+* *Hovering* over the bars will bring up number of persons killed for each bar segment.
+
+```{r pvf.calyr, message=F, warning=F}
+
+df <- fatalities.pvf %>%
+  group_by(Year=year, Victim=victim) %>%
+  summarize(Number = n()) %>%
+  left_join(allrows.calyr.pvf, .) %>%
+  mutate(Number = tidyr::replace_na(Number,0)) %>%
+  group_by(Year) %>%
+  mutate(Total = sum(Number))
+
+ymax <- max(df$Total)
+
+p <- ggplot(df, aes(x=Year, y=Number, 
+                    fill = Victim)) +
+  geom_bar(stat = "identity", color="grey", alpha = 0.8) +
+  
+  annotate("text",
+           x = max.yr,
+           y = df$Total[nrow(df)] + 0.5,
+           label = "YTD", size = 3) +
+  
+  labs(title = "Persons killed in vehicular pursuits by calendar year",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.pvf.4) +
+  
+  ylim(0, (ymax + 2)) +
+  scale_y_continuous(breaks = 1:(ymax + 2)) +
+  scale_x_continuous(breaks = min.yr:max.yr)
+
+  
+ggplotly(p) %>% reverse_legend_labels()
+```
+
+____
+
+##### After pursuit fatalities
+
+This graph shows only the "after pursuit" fatalities:  incidents where there has been a pursuit, but the death occurs after the pursuit ended.  These include both homicides and suicides following a pursuit, and the number of each is shown in the bars.  Most of these deaths are caused by gunshot.
+
+* *Hovering* over the bars will bring up number of persons killed for each bar segment.
+
+
+```{r apf.calyr, message=F, warning=F}
+
+df <- fatalities.apf %>%
+  group_by(incident.type, Year=year) %>%
+  summarize(Number = n()) %>%
+  mutate(Fatality = factor(ifelse(grepl("suicide", incident.type), "Suicide", "Homicide"),
+                           levels = c("Suicide", "Homicide"))) %>%
+  group_by(Year) %>%
+  mutate(Total = sum(Number))
+
+p <- ggplot(df, aes(x=Year, y=Number, 
+                    fill = Fatality)) +
+  
+  geom_bar(stat = "identity", color="grey", alpha = 0.8) +
+  
+  annotate("text",
+           x = max.yr,
+           y = df$Total[nrow(df)] + 0.5,
+           label = "YTD", size = 3) +
+  
+  labs(title = "Fatalities after vehicle pursuits by calendar year",
+       y = "Number") +
+  
+  scale_x_continuous(breaks = min.yr:max.yr) +
+  
+  scale_fill_manual(values = c("gold2", "steelblue4"))
+  
+  
+ggplotly(p) %>% reverse_legend_labels()
+
+```
+
+
+#### Legislative year {.tabset .tabset-pills}
+
+Aggregating the fatality counts into standardized legislative years does a somewhat better job of showing the policy impacts, but is still not accurate because the standardized years don't exactly line up with when legislation becomes effective.  
+
+Note that the current legislative year is year to date --
+August 1 - `r format(Sys.Date(), format="%B %d, %Y")`--
+so it is not strictly comparable to the other years.  The YTD count may rise but it will not decline.  As a result increases from previous years to the current YTD are meaningful but potentially under-estimate the difference, while declines observed from previous years to the current YTD are not meaningful since this year's total is not complete.
+
+We exclude data from the 2014-2015 legislative year since our data observation period starts in January 2015 which does not cover that whole legislative year.
+
+##### Pursuit vehicular fatalities
+
+The plot below displays the number of people killed in each period, broken down by the status of the victim.  
+
+* *Hovering* over the bars will bring up the number of persons killed.
+
+```{r pvf.legyear, message=F, warning=F}
+
+df <- fatalities.pvf %>%
+  filter(date > as.Date("2015-07-30")) %>% # to get the first complete year
+  group_by(leg.year, Victim=victim) %>%
+  summarize(Number = n()) %>%
+  left_join(allrows.legyr.pvf, .) %>%
+  mutate(Number = tidyr::replace_na(Number,0)) %>%
+  group_by(leg.year) %>%
+  mutate(Total = sum(Number),
+         leg.year = gsub("Aug|Jul", "", leg.year))
+ 
+ymax <- max(df$Total)
+
+p <- ggplot(df, 
+            aes(x=leg.year, y=Number,
+                fill=Victim)) +
+  
+  geom_bar(stat = "identity", color="grey", alpha = 0.8) +
+
+  # policy period separators
+  
+  geom_vline(xintercept = 6.5, color="grey") + # reform 
+  geom_vline(xintercept = 9.5, color="grey") + # rollback
+  
+  annotate("text", 
+           x = "2017-2018", 
+           y = ymax + 1.5, 
+           label = "Pre-reform", size = 3) +
+  
+  annotate("text", 
+           x = "2022-2023", 
+           y = ymax + 1.5, 
+           label = "Reform", size = 3) +
+  
+  annotate("text", 
+           x = "2024-2025", 
+           y = ymax + 1.5, 
+           label = "Rollback", size = 3) +
+  
+  annotate("text",
+           x = max(df$leg.year), # is a factor
+           y = df$Total[nrow(df)] + 0.5,
+           label = "YTD", size = 3) +
+  
+  # geom_segment(aes(x= 7+0.5, xend=nrow(df), y=3, yend=3), 
+  #              color="gray", 
+  #              arrow=arrow()) +
+  
+  labs(title = "Persons killed in vehicular pursuits by legislative year",
+       x = "Legislative Year",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.pvf.4) +
+
+  scale_y_continuous(limits = c(0, ymax+2),
+                     breaks= 1:(ymax + 1)) +
+  
+
+  
+  theme(axis.text.x = element_text(size = rel(0.7)))
+
+# # plotly doesn't work with arrow(), so
+# # see https://plotly.com/r/text-and-annotations/
+# a <- list(
+#   x = 8, # "Aug2022-Jul2023"
+#   y = ymax + 1.5,
+#   xref = "x",
+#   yref = "y",
+#   showarrow = TRUE,
+#   arrowhead = 2,
+#   ax = -30,
+#   ay = 0
+# )
+  
+ggplotly(p) %>% reverse_legend_labels() # %>% layout(annotations = a) 
+
+```
+
+##### After pursuit fatalities
+
+This graph shows only the "after pursuit" fatalities:  incidents where there has been a pursuit, but the death occurs after the pursuit ended.  These include both homicides and suicides following a pursuit, and the number of each is shown in the bars.  Most of these deaths are caused by gunshot.
+
+* *Hovering* over the bars will bring up number of persons killed for each bar segment.
+
+
+```{r apf.legyear, message=F, warning=F}
+
+df <- fatalities.apf %>%
+  filter(date > as.Date("2015-07-30")) %>% # to get the first complete year
+  group_by(incident.type, leg.year) %>%
+  summarize(Number = n()) %>%
+  mutate(Fatality = factor(ifelse(grepl("suicide", incident.type), "Suicide", "Homicide"),
+                           levels = c("Suicide", "Homicide"))) %>%
+  group_by(leg.year) %>%
+  mutate(Total = sum(Number),
+         leg.year = gsub("Aug|Jul", "", leg.year))
+
+ymax <- max(df$Total)
+
+p <- ggplot(df, aes(x=leg.year, y=Number, 
+                    fill = Fatality)) +
+  
+  geom_bar(stat = "identity", color="grey", alpha = 0.8) +
+
+  # policy period separators
+  
+  geom_vline(xintercept = 6.5, color="grey") + # reform 
+  geom_vline(xintercept = 9.5, color="grey") + # rollback
+  
+  annotate("text", 
+           x = "2017-2018", 
+           y = ymax + 1.5, 
+           label = "Pre-reform", size = 3) +
+  
+  annotate("text", 
+           x = "2022-2023", 
+           y = ymax + 1.5, 
+           label = "Reform", size = 3) +
+  
+  annotate("text", 
+           x = "2024-2025", 
+           y = ymax + 1.5, 
+           label = "Rollback", size = 3) +
+
+  
+  annotate("text",
+           x = max(df$leg.year), # is a factor
+           y = df$Total[nrow(df)] + 0.5,
+           label = "YTD", size = 3) +
+  
+  labs(title = "Fatalities after vehicle pursuits by legislative year",
+       x = "Legislative Year",
+       y = "Number") +
+  
+  
+  scale_y_continuous(limits = c(0, ymax+2),
+                     breaks= 1:(ymax + 2)) +
+  
+  scale_fill_manual(values = c("gold2", "steelblue4")) +
+
+
+  theme(axis.text.x = element_text(size = rel(0.7)))
+  
+ggplotly(p) %>% reverse_legend_labels() 
+
+```
+
+____
+
+### Agencies 
+
+Agencies introduce another counting metric, since multiple agencies may be involved in a single incident.  
+
+In this section we identify every agency involved in at least one pursuit-related fatality, along with the number and type of fatalities from the incidents involved ("Each agency count").  This means that fatalities will be multiply counted for incidents with multiple agency involvement, and the totals cannot be compared to those in previous sections.  For cross-reference, we also include a graph with the multi-agency fatalities grouped together ("Multi-agency count").
+
+#### By type {.tabset .tabset-pills}
+
+##### Pursuit vehicular fatalities {.tabset}
+
+###### Each agency count
+
+```{r pvf.agencyeach.type, message=F, warning=F}
+df <- agency.fatality.p.long  %>%
+  filter(grepl("vehicular", incident.type)) %>%
+  group_by(agency.type, Victim=victim) %>%
+  summarise(Number = n()) %>%
+  group_by(agency.type) %>%
+  mutate(Total = sum(Number))  %>%
+  mutate(Percent = Total/nrow(fatalities.pvf)) # percent of fatalities, sum > 100
+
+ 
+p <- ggplot(df, 
+            aes(x = reorder(agency.type, Total), y = Number, 
+                fill = Victim,
+                text = paste("Victim: ", Victim, "<br>",
+                             "Number: ", Number))) +
+
+  geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+            size = 3, nudge_y = 1) +
+  
+  labs(title = "Pursuit Vehicular Fatalities by Agency Type: Each agency count*",
+       caption = "WA State since 2015; y-axis=pct, bar label=count",
+       x = "Agency type",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.pvf.4)
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+
+```
+
+* Fatalities are counted more than once if multiple agencies are involved.
+
+____
+
+###### Multi-agency count
+
+
+```{r pvf.multiagency.type, message=F, warning=F}
+df <- fatalities.pvf  %>%
+  group_by(agency.type, Victim=victim) %>%
+  summarise(Number = n()) %>%
+  group_by(agency.type) %>%
+  mutate(Total = sum(Number))  %>%
+  mutate(Percent = Total/nrow(fatalities.pvf))
+
+ 
+p <- ggplot(df, 
+            aes(x = reorder(agency.type, Total), y = Number, 
+                fill = Victim,
+                text = paste("Victim: ", Victim, "<br>",
+                             "Number: ", Number))) +
+
+  geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+            size = 3, nudge_y = 1) +
+  
+  labs(title = "Pursuit Vehicular Fatalities by Agency Type: Multi-agency count*",
+       caption = "WA State since 2015; y-axis=pct, bar label=count",
+       x = "Agency type",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.pvf.4)
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+
+```
+
+* Each fatality only counts once
+
+____
+
+##### After pursuit fatalities {.tabset .tabset-pills}
+
+These graphs show only the "after pursuit" fatalities:  incidents where there has been a pursuit, but the death occurs after the pursuit ended.  These include both homicides and suicides following a pursuit, and the number of each is shown in the bars.  Most of these deaths are caused by gunshot.
+
+###### Each agency count
+
+```{r apf.eachagency.type, message=F, warning=F}
+df <- agency.fatality.p.long  %>%
+  filter(!grepl("vehicular", incident.type)) %>%
+  group_by(agency.type, incident.type) %>%
+  summarise(Number = n()) %>%
+  mutate(Fatality = factor(ifelse(grepl("suicide", incident.type), "Suicide", "Homicide"),
+                           levels = c("Suicide", "Homicide"))) %>%
+  group_by(agency.type) %>%
+  mutate(Total = sum(Number))  %>%
+  mutate(Percent = Total/nrow(fatalities.apf))
+ 
+p <- ggplot(df, 
+            aes(x = reorder(agency.type, Number), y = Number, 
+                fill = Fatality,
+                text = paste("Type: ", Fatality, "<br>",
+                             "Number: ", Number))) +
+
+  geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+            size = 3, nudge_y = 1) +
+  
+  labs(title = "Fatalities After Pursuits by Agency Type: Each agency count*",
+       caption = "WA State since 2015",
+       x = "Agency type",
+       y = "Number") +
+  
+  scale_fill_manual(values = c("gold2", "steelblue4"))
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+```
+
+* Fatalities are counted more than once if multiple agencies are involved.
+
+____
+
+###### Multi-agency count
+
+```{r apf.multiagency.type, message=F, warning=F}
+df <- fatalities.apf  %>%
+  group_by(agency.type, incident.type) %>%
+  summarise(Number = n()) %>%
+  mutate(Fatality = factor(ifelse(grepl("suicide", incident.type), "Suicide", "Homicide"),
+                           levels = c("Suicide", "Homicide"))) %>%
+  group_by(agency.type) %>%
+  mutate(Total = sum(Number))  %>%
+  mutate(Percent = Total/nrow(fatalities.apf))
+ 
+p <- ggplot(df, 
+            aes(x = reorder(agency.type, Number), y = Number, 
+                fill = Fatality,
+                text = paste("Type: ", Fatality, "<br>",
+                             "Number: ", Number))) +
+
+  geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+            size = 3, nudge_y = 1) +
+  
+  labs(title = "Fatalities After Pursuits by Agency Type: Multi-agency count*",
+       caption = "WA State since 2015",
+       x = "Agency type",
+       y = "Number") +
+  
+  scale_fill_manual(values = c("gold2", "steelblue4"))
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+```
+
+* Each fatality only counts once
+
+____
+
+
+#### By name {.tabset .tabset-pills}
+
+For these graphs, we report only the "each agency count" statistics.  
+
+##### Pursuit vehicular fatalities
+
+The plot below displays the number of people killed in each period, broken down by the status of the victim.  
+
+```{r pvf.agency.name, message=F, warning=F}
+
+df <- agency.fatality.p.long  %>%
+  filter(grepl("vehicular", incident.type)) %>%
+  
+  mutate(agency = gsub("Washington", "WA", agency),
+         agency = gsub("County Sheriff's Office", "Co SO", agency),
+         agency = gsub("Police Department", "PD", agency),
+         agency = ifelse(grepl(",", agency), "Multiple agencies", agency)) %>%
+  group_by(agency, Victim=victim) %>%
+  summarise(Number = n()) %>%
+  group_by(agency) %>%
+  mutate(Total = sum(Number))  %>%
+  mutate(Percent = Total/nrow(fatalities.pvf))
+ 
+p <- ggplot(df, 
+            aes(x = reorder(agency, Total), y = Number,
+                fill = Victim,
+                text = paste("Victim: ", Victim, "<br>",
+                             "Number: ", Number))) +
+
+  geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+            size = 3, nudge_y = 0.5) +
+  
+  labs(title = "Pursuit Vehicular Fatalities by Agency: Each agency count*",
+       caption = "WA State since 2015; y-axis=pct, bar label=count",
+       x = "Agency",
+       y = "Number") +
+
+  scale_fill_manual(values = cols.pvf.4) +
+  scale_y_continuous(breaks = 0:max(df$Total)) +
+  coord_flip()
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+
+```
+
+* Fatalities are counted more than once if multiple agencies are involved.
+
+____
+
+
+##### After pursuit fatalities
+
+This graph shows only the "after pursuit" fatalities:  incidents where there has been a pursuit, but the death occurs after the pursuit ended.  These include both homicides and suicides following a pursuit, and the number of each is shown in the bars.  Most of these deaths are caused by gunshot.
+
+```{r apf.agency.name, message=F, warning=F}
+df <- agency.fatality.p.long  %>%
+  filter(!grepl("vehicular", incident.type)) %>%
+  
+    mutate(agency = gsub("Washington", "WA", agency),
+           agency = gsub("County Sheriff's Office", "Co SO", agency),
+           agency = gsub("Police Department", "PD", agency),
+           agency = ifelse(grepl(",", agency), "Multiple agencies", agency)) %>%
+  group_by(agency, incident.type) %>%
+  summarise(Number = n()) %>%
+  mutate(Fatality = factor(ifelse(grepl("suicide", incident.type), "Suicide", "Homicide"),
+                           levels = c("Suicide", "Homicide"))) %>%
+  group_by(agency) %>%
+  mutate(Total = sum(Number))  %>%
+  mutate(Percent = Total/nrow(fatalities.apf))
+ 
+p <- ggplot(df, 
+            aes(x = reorder(agency, Total), y = Number, 
+                fill = Fatality,
+                text = paste("Type: ", Fatality, "<br>",
+                             "Number: ", Number))) +
+
+  geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+            size = 3, nudge_y = 0.5) +
+  
+  labs(title = "Fatalities After Pursuits by Agency: Each agency count*",
+       caption = "WA State since 2015",
+       x = "Agency",
+       y = "Number") +
+  
+  scale_fill_manual(values = c("gold2", "steelblue4")) +
+  scale_y_continuous(breaks = 0:(max(df$Total)+1), 
+                     labels = as.character(0:(max(df$Total)+1))) +
+  theme(axis.text.y=element_text(size=6)) +
+  
+  coord_flip()
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+
+```
+
+* Fatalities are counted more than once if multiple agencies are involved.
+
+____
+
+
+### Geography 
+
+
+#### By County {.tabset .tabset-pills}
+
+##### Pursuit vehicular fatalities
+
+The plot below displays the number of people killed in each period, broken down by the status of the victim.  
+
+```{r pvf.county, message=F, warning=F}
+df <- fatalities.pvf  %>%
+  group_by(County=county, Victim=victim) %>%
+  summarise(Number = n()) %>%
+  group_by(County) %>%
+  mutate(Total = sum(Number))  %>%
+  mutate(Percent = Total/nrow(fatalities.pvf))
+ 
+p <- ggplot(df, 
+            aes(x = reorder(County, Total), y = Number, 
+                fill = Victim,
+                text = paste("Victim: ", Victim, "<br>",
+                             "Number: ", Number))) +
+
+  geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+            size = 3, nudge_y = 0.5) +
+  
+  labs(title = "Pursuit Vehicular Fatalities by County",
+       caption = "WA State since 2015; y-axis=pct, bar label=count",
+       x = "County",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.pvf.4) +
+  scale_y_continuous(breaks = 0:max(df$Total))+
+  coord_flip()  
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+
+
+```
+
+____
+
+##### After pursuit fatalities
+
+This graph shows only the "after pursuit" fatalities:  incidents where there has been a pursuit, but the death occurs after the pursuit ended.  These include both homicides and suicides following a pursuit, and the number of each is shown in the bars.  Most of these deaths are caused by gunshot.
+
+```{r apf.county, message=F, warning=F}
+df <- fatalities.apf  %>%
+  group_by(County=county, incident.type) %>%
+  summarise(Number = n()) %>%
+  mutate(Fatality = factor(ifelse(grepl("suicide", incident.type), "Suicide", "Homicide"),
+                           levels = c("Suicide", "Homicide"))) %>%
+  group_by(County) %>%
+  mutate(Total = sum(Number))  %>%
+  mutate(Percent = Total/nrow(fatalities.apf))
+ 
+p <- ggplot(df, 
+            aes(x = reorder(County, Total), y = Number, 
+                fill = Fatality,
+                text = paste("Type: ", Fatality, "<br>",
+                             "Number: ", Number))) +
+
+  geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+            size = 3, nudge_y = 0.5) +
+  
+  labs(title = "Fatalities After Pursuits by County",
+       caption = "WA State since 2015",
+       x = "County",
+       y = "Number") +
+  
+  scale_fill_manual(values = c("gold2", "steelblue4"))+
+  scale_y_continuous(breaks = 0:max(df$Total))+
+  coord_flip()
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+
+
+```
+
+____
+
+
+#### By City {.tabset .tabset-pills}
+
+##### Pursuit vehicular fatalities
+
+The plot below displays the number of people killed in each period, broken down by the status of the victim.  
+
+```{r pvf.city, message=F, warning=F}
+df <- fatalities.pvf  %>%
+  group_by(City=city, Victim=victim) %>%
+  summarise(Number = n()) %>%
+  group_by(City) %>%
+  mutate(Total = sum(Number))  %>%
+  mutate(Percent = Total/nrow(fatalities.pvf))
+ 
+p <- ggplot(df, 
+            aes(x = reorder(City, Total), y = Number, 
+                fill = Victim,
+                text = paste("Victim: ", Victim, "<br>",
+                             "Number: ", Number))) +
+
+  geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+            size = 3, nudge_y = 0.5) +
+  
+  labs(title = "Pursuit Vehicular Fatalities by City",
+       caption = "WA State since 2015; y-axis=pct, bar label=count",
+       x = "City",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.pvf.4) +
+  scale_y_continuous(breaks = 0:max(df$Total))+
+  coord_flip()  
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+
+
+```
+
+____
+
+##### After pursuit fatalities
+
+This graph shows only the "after pursuit" fatalities:  incidents where there has been a pursuit, but the death occurs after the pursuit ended.  These include both homicides and suicides following a pursuit, and the number of each is shown in the bars.  Most of these deaths are caused by gunshot.
+
+There are too many cities to be legible if plotted, so we restrict the cities to those with 2 or more after pursuit fatalities.
+
+```{r apf.city, message=F, warning=F}
+df <- fatalities.apf  %>%
+  rename(City=city) %>%
+  group_by(City, incident.type) %>%
+  summarise(Number = n()) %>%
+  mutate(Fatality = factor(ifelse(grepl("suicide", incident.type), "Suicide", "Homicide"),
+                           levels = c("Suicide", "Homicide")))  %>%
+  group_by(City) %>%
+  mutate(Total = sum(Number))  %>%
+  mutate(Percent = Total/nrow(fatalities.apf)) %>%
+  filter(Total >= 2)
+
+incl.pct <- sum(df$Percent)
+
+p <- ggplot(df, 
+            aes(x = reorder(City, Total), y = Number, 
+                fill = Fatality,
+                text = paste("Type: ", Fatality, "<br>",
+                             "Number: ", Number))) +
+
+  geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+            size = 3, nudge_y = 0.3) +
+  
+  labs(title = paste("Fatalities After Pursuits by City: Cities with 2+ only, incl.", 
+                     scales::percent(incl.pct, acc=1), "of incidents"),
+       caption = "WA State since 2015",
+       x = "City",
+       y = "Number") +
+  
+  scale_fill_manual(values = c("gold2", "steelblue4"))+
+  scale_y_continuous(breaks = 0:max(df$Total))+
+  theme(axis.text.y = element_text(size = rel(0.9))) +
+  
+  coord_flip()
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+
+
+```
+____
+
+#### By Legislative District {.tabset .tabset-pills}
+
+##### Pursuit vehicular fatalities
+
+The plot below displays the number of people killed in each period, broken down by the status of the victim.  
+
+```{r pvf.ld, message=F, warning=F}
+df <- fatalities.pvf  %>%
+  group_by(WA_District, Victim=victim) %>%
+  summarise(Number = n()) %>%
+  group_by(WA_District) %>%
+  mutate(Total = sum(Number))  %>%
+  mutate(Percent = Total/nrow(fatalities.pvf))
+ 
+p <- ggplot(df, 
+            aes(x = reorder(WA_District, Total), y = Number, 
+                fill = Victim,
+                text = paste("Victim: ", Victim, "<br>",
+                             "Number: ", Number))) +
+
+  geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+            size = 3, nudge_y = 0.5) +
+  
+  labs(title = "Pursuit Vehicular Fatalities by WA Legislative District",
+       caption = "WA State since 2015; y-axis=pct, bar label=count",
+       x = "District",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.pvf.4) +
+  scale_y_continuous(breaks = 0:max(df$Total))+
+  coord_flip()  
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+
+
+```
+
+____
+
+##### After pursuit fatalities
+
+This graph shows only the "after pursuit" fatalities:  incidents where there has been a pursuit, but the death occurs after the pursuit ended.  These include both homicides and suicides following a pursuit, and the number of each is shown in the bars.  Most of these deaths are caused by gunshot.
+
+```{r apf.ld, message=F, warning=F}
+df <- fatalities.apf  %>%
+  group_by(WA_District, incident.type) %>%
+  summarise(Number = n()) %>%
+  mutate(Fatality = factor(ifelse(grepl("suicide", incident.type), "Suicide", "Homicide"),
+                           levels = c("Suicide", "Homicide"))) %>%
+  group_by(WA_District) %>%
+  mutate(Total = sum(Number))  %>%
+  mutate(Percent = Total/nrow(fatalities.apf))
+ 
+p <- ggplot(df, 
+            aes(x = reorder(WA_District, Total), y = Number, 
+                fill = Fatality,
+                text = paste("Type: ", Fatality, "<br>",
+                             "Number: ", Number))) +
+
+  geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+            size = 3, nudge_y = 0.5) +
+  
+  labs(title = "Fatalities After Pursuits by 2023 WA Legislative District",
+       caption = "WA State since 2015",
+       x = "District",
+       y = "Number") +
+  
+  scale_fill_manual(values = c("gold2", "steelblue4"))+
+  scale_y_continuous(breaks = 0:max(df$Total))+
+  coord_flip()
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+
+
+```
+
+____
+
+##### WA 2025 LD map
+
+The current legislative district map can be found on the [WA leg.gov website](https://app.leg.wa.gov/districtfinder/).
+
+The map for 2025 shown below is taken from [this WA leg.gov website](https://leg.wa.gov/media/flxjubby/2025-state-district-maps-and-members.pdf)
+
+```{r, wald.map, out.width="120%"}
+knitr::include_graphics(here::here("Images", "WALD2025.PNG"))
+```
+____
+
+## Incident characteristics
+
+These tables and graphs break down the number of incidents, rather than persons killed, and we restrict the focus to incidents with active pursuit fatalities.  In active pursuit incidents more than one person may be killed, so there are fewer incidents than fatalities.  The same is not true for the after pursuit fatalities in our dataset: each of these only has one fatality.  So an "incident-based" analysis is the same as a "fatality-based" analysis for those incidents, and the results would be the same as in the previous section.
+
+Recall that we do not have data on all vehicular pursuit incidents -- we only have data on the incidents that result in a fatality.
+
+### Fatalities per incident
+
+We only observe multi-fatality incidents for the pursuit vehicular homicides. There may have been accidents and injuries during the after pursuit fatalities but we are not capturing those in our data. 
+
+```{r inci.fatalities}
+incidents.pvf  %>%
+  group_by(Fatalities=fatalities) %>%
+  summarize(Number = n()) %>%
+  mutate(Percent = Number/sum(Number),
+         Fatalities = as.character(Fatalities)) %>%
+  bind_rows(data.frame(Fatalities = "Total",
+                       Number = sum(.$Number),
+                       Percent = sum(.$Percent))) %>%
+  mutate(Percent = scales::percent(Percent)) %>%
+  
+  kbl(caption = "Pursuit vehicular fatalities per incident*",
+      align = "lrr",
+      digits = c(0,0,1)) %>%
+  kable_styling(bootstrap_options = "striped") %>%
+  row_spec(3, bold = T) %>%
+  add_footnote("Incidents with pursuit fatalities in WA since 2015", notation = "symbol")
+```
+
+____
+
+### Agencies {.tabset .tabset-pills}
+
+Agencies introduce another counting metric, since multiple agencies may be involved in a single incident.  In this section we identify every agency involved in at least one pursuit-related fatality, along with the number and type of incidents involved ("Each agency count").  This means that incidents will be multiply counted when incidents have multiple agencies involved, and the totals cannot be compared to those in previous sections.  For cross-reference, we also include a graph with the multi-agency fatalities grouped together ("Multi-agency count").
+
+#### By type {.tabset .tabset-pills}
+
+##### Each agency count
+
+```{r inci.eachagency.type}
+df <- agency.incident.p.long  %>%
+  group_by(agency.type, Incident=incident.type) %>%
+  summarise(Number = n()) %>%
+  group_by(agency.type) %>%
+  mutate(Total = sum(Number)) %>%
+  mutate(Percent = Total/nrow(incidents.p))
+
+p <- ggplot(df, 
+            aes(x = reorder(agency.type, Total), y = Number, 
+                fill = Incident,
+                text = paste("Incident: ", Incident, "<br>",
+                             "Number: ", Number))) +
+
+   geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+                size = 3, nudge_y = 1) +
+  
+  labs(title = "Pursuit Incidents by Agency Type: Each agency count*",
+       caption = "WA State since 2015; y-axis=pct, bar label=count",
+       x = "Agency type",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.inci)
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+
+
+```
+
+* Incidents are counted more than once if multiple agencies are involved.
+
+____
+
+##### Multi-agency count
+
+```{r inci.multiagency.type}
+df <- incidents.p  %>%
+  group_by(agency.type, Incident=incident.type) %>%
+  summarise(Number = n()) %>%
+  group_by(agency.type) %>%
+  mutate(Total = sum(Number)) %>%
+  mutate(Percent = Total/nrow(incidents.p))
+
+p <- ggplot(df, 
+            aes(x = reorder(agency.type, Total), y = Number, 
+                fill = Incident,
+                text = paste("Incident: ", Incident, "<br>",
+                             "Number: ", Number))) +
+
+   geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+                size = 3, nudge_y = 1) +
+  
+  labs(title = "Pursuit Incidents by Agency Type: Multi-agency count*",
+       caption = "WA State since 2015; y-axis=pct, bar label=count",
+       x = "Agency type",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.inci)
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+
+
+```
+
+* Each incident only counts once
+
+_____
+
+#### By name 
+
+
+For this graph, we report only the "each agency count" statistics.  
+
+```{r inci.agency.name}
+df <- agency.incident.p.long  %>%
+  mutate(agency = gsub("Washington", "WA", agency),
+         agency = gsub("County Sheriff's Office", "Co SO", agency),
+         agency = gsub("Police Department", "PD", agency),
+         agency = if_else(grepl(",", agency), "Multiple agencies", agency)) %>%
+  group_by(agency, Incident=incident.type) %>%
+  summarise(Number = n()) %>%
+  group_by(agency) %>%
+  mutate(Total = sum(Number)) %>%
+  mutate(Percent = Total/nrow(incidents.p))
+
+p <- ggplot(df, 
+            aes(x = reorder(agency, Total), y = Number, 
+                fill = Incident,
+                text = paste("Incident: ", Incident, "<br>",
+                             "Number: ", Number))) +
+
+  geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+                size = 2, nudge_y = 0.6) +
+  
+  labs(title = "Pursuit Incidents by Agency: Each agency count*",
+       caption = "WA State since 2015",
+       x = "Agency",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.inci) +
+  scale_y_continuous(breaks = 0:(max(df$Total)+1), 
+                     labels = as.character(0:(max(df$Total)+1))) +
+  theme(axis.text.y=element_text(size=6)) +
+          
+  coord_flip()
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+  
+
+```
+
+
+* Incidents are counted more than once if multiple agencies are involved.
+
+____
+
+### Geography {.tabset .tabset-pills}
+
+#### By County 
+
+```{r inci.county}
+df <- incidents.p  %>%
+  group_by(county, Incident=incident.type) %>%
+  summarise(Number = n()) %>%
+  group_by(county) %>%
+  mutate(Total = sum(Number)) %>%
+  mutate(Percent = Total/nrow(incidents.p))
+
+p <- ggplot(df, 
+            aes(x = reorder(county, Total), y = Number, 
+                fill = Incident,
+                text = paste("Incident: ", Incident, "<br>",
+                             "Number: ", Number))) +
+
+   geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  geom_text(aes(y = Total,
+                label = scales::percent(Percent, acc=1)),
+                size = 3, nudge_y = 1) +
+  
+  labs(title = "Pursuit Incidents by County",
+       caption = "WA State since 2015",
+       x = "County",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.inci) +
+    scale_y_continuous(breaks = 0:max(df$Total), labels = as.character(0:max(df$Total))) +
+  coord_flip()
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+```
+
+____
+
+
+
+#### By City 
+
+```{r inci.city}
+df <- incidents.p  %>%
+  group_by(city, Incident=incident.type) %>%
+  summarise(Number = n()) %>%
+  group_by(city) %>%
+  mutate(Total = sum(Number)) %>%
+  mutate(Percent = Total/nrow(incidents.p))
+
+p <- ggplot(df, 
+            aes(x = reorder(city, Total), y = Number, 
+                fill = Incident,
+                text = paste("Incident: ", Incident, "<br>",
+                             "Number: ", Number))) +
+
+   geom_bar(stat="identity",  color = "grey", alpha = 0.8) +
+  
+  # geom_text(aes(y = Total,
+  #               label = scales::percent(Percent, acc=1)),
+  #               size = 3, nudge_y = 0.5) +
+  
+  labs(title = "Pursuit Incidents by City",
+       caption = "WA State since 2015",
+       x = "City",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.inci) +
+  scale_y_continuous(breaks = 0:max(df$Total)) +
+  
+  theme(axis.text.y = element_text(size = 6)) +
+  
+  coord_flip()
+
+ggplotly(p, tooltip = "text") %>% reverse_legend_labels()
+
+```
+____
+
+
+### Trend over time {.tabset .tabset-pills}
+
+For incident counts, in contrast to fatality counts, we present only calendar and legislative year graphics.  Neither provides an accurate "apples-to-apples" comparison.
+
+#### Calendar year
+
+This is a common way to aggregate the fatality counts into standardized time units in a single graphic, but it does not give a  clear picture of the policy impacts because the laws changed in the middle of 2021 and the middle of 2024.
+
+```{r inci.calyr}
+df <- incidents.p %>%
+  group_by(Year=year, incident.type) %>%
+  summarize(Number = n()) %>%
+  left_join(allrows.calyr.inci, .) %>%
+  mutate(Number = tidyr::replace_na(Number,0)) %>%
+  group_by(Year) %>%
+  mutate(Total = sum(Number))
+
+
+
+p <- ggplot(df, aes(x=Year, y=Number, 
+                    fill = incident.type)) +
+  geom_bar(stat = "identity", color="grey", alpha = 0.8) +
+  
+  annotate("text",
+           x = max.yr,
+           y = df$Total[nrow(df)]+1,
+           label = "YTD", size = 3) +
+  
+  labs(title = "Pursuit incidents by calendar year",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.inci) +
+  scale_x_continuous(breaks = min.yr:max.yr)
+  
+ggplotly(p) %>% reverse_legend_labels()
+
+
+```
+
+____
+
+#### Legislative year
+
+Aggregating the fatality counts into standardized legislative years does a somewhat better job of showing the policy impacts, but is still not accurate because the standardized years don't exactly line up with when legislation becomes effective.  Note also that the current legislative year is typically not yet complete, so should be interpreted with care because the total may rise (it will not decline).  Increases from previous years to the current year are meaningful but potentially under-estimate the difference, declines observed from previous years to the current year are not meaningful since this year's total is not complete.
+
+```{r inci.legyr}
+
+df <- incidents.p %>%
+  filter(date > as.Date("2015-07-30")) %>% # to get the first complete year
+  group_by(leg.year, incident.type) %>%
+  summarize(Number = n()) %>%
+  left_join(allrows.legyr.inci, .) %>%
+  mutate(Number = tidyr::replace_na(Number,0)) %>%
+  group_by(leg.year) %>%
+  mutate(Total = sum(Number),
+         leg.year = gsub("Aug|Jul", "", leg.year))
+
+ymax <- max(df$Total)
+
+p <- ggplot(df, 
+            aes(x=leg.year, y=Number,
+                fill=incident.type)) +
+  geom_bar(stat = "identity", color="grey", alpha = 0.8) +
+  
+  # policy period separators
+  
+  geom_vline(xintercept = 6.5, color="grey") + # reform 
+  geom_vline(xintercept = 9.5, color="grey") + # rollback
+  
+  annotate("text", 
+           x = "2017-2018", 
+           y = ymax + 1.5, 
+           label = "Pre-reform", size = 3) +
+  
+  annotate("text", 
+           x = "2022-2023", 
+           y = ymax + 1.5, 
+           label = "Reform", size = 3) +
+  
+  annotate("text", 
+           x = "2024-2025", 
+           y = ymax + 1.5, 
+           label = "Rollback", size = 3) +
+  
+  annotate("text",
+           x = max(df$leg.year), # is a factor
+           y = df$Total[nrow(df)] + 0.5,
+           label = "YTD", size = 3) +
+  
+  labs(title = "Pursuit incidents by legislative year",
+       x = "Legislative Year",
+       y = "Number") +
+  
+  scale_fill_manual(values = cols.inci) +
+  
+  scale_y_continuous(limits = c(0, ymax+2),
+                     breaks= 1:(ymax + 1)) +
+  
+  
+  
+  theme(axis.text.x = element_text(size = rel(0.7)))
+
+
+ggplotly(p) %>% reverse_legend_labels() 
+
+```
+
+
+____
+
+# Attempted stops {.tabset .tabset-pills}
+
+Attempted stops are defined as incidents when an officer signals a motorist to stop by activating their lights and/or siren, but the motorist flees and the officer does not pursue.  Whether these incidents should be considered vehicular pursuits is unclear.  The definition of a pursuit in Washington was also codified into law by HB 1054 in [RCW 10.116.060](https://app.leg.wa.gov/RCW/default.aspx?cite=10.116.060):
+
+____
+
+  (4) For purposes of this section, "vehicular pursuit" means an attempt by a uniformed peace officer in a vehicle equipped with emergency lights and a siren to stop a moving vehicle where the operator of the moving vehicle appears to be aware that the officer is signaling the operator to stop the vehicle and the operator of the moving vehicle appears to be willfully resisting or ignoring the officer's attempt to stop the vehicle by increasing vehicle speed, making evasive maneuvers, or operating the vehicle in a reckless manner that endangers the safety of the community or the officer.
+
+____
+
+Note this definition does not require that the officer pursue the fleeing vehicle.  Attempted stops would appear to meet this definition of pursuit.
+
+There are incidents in the Fatal Encounters dataset that appear to be attempted stops.  Our ability to identify these depends on what is reported in the supporting document.  This is typically a news report, which in turn often relies on official police press releases or statements, so there are multiple opportunities for mis-characterization.  It also seems likely that such incidents are more likely to be ignored or misreported by the media, so we miss them altogether. 
+
+Given the ambiguous status of these "attempted stops", and the greater likelihood that they will not be captured accurately in our data, we have chosen to exclude them from the pursuit analysis above.  
+
+But these incidents are dangerous; they trigger the same fear and flight reactions in the subject, setting in motion a sequence of events that can lead to accidents, injuries and fatalities -- just like active pursuits.  
+
+One example is an incident in Marysville, WA on August 29, 2020.  According to [the news report](https://www.heraldnet.com/news/man-charged-in-marysville-crash-that-killed-cyclist-woman/), an officer was on her way to another call around 2am when she saw a motorist doing donuts in the roadway.  The officer activated her emergency lights to signal the motorist to stop, and allegedly he sped off but she did not pursue him. Within a minute he killed a man on a bicycle, and then crashed through the bedroom of a duplex killing a 97 year old woman asleep in her bed.
+
+In this section we present information on the attempted stop incidents we do observe in our data, noting again the caveat that we may be missing many of these incidents.
+
+Of the `r nrow(incidents.as)` attempted stop incidents we observe in our data, `r sum(incidents.as$inci.mapmult=="mult")` involved multiple fatalities.
+
+These incidents are shown on the map below.  More information on each case can be obtained by hovering over, or clicking, the incident icon on the map.  The list of fatalities is in the “Table of fatalities” tab, which can be downloaded.
+
+## Map of incidents
+
+```{r map.attempt.stops}
+
+iconset <- awesomeIconList(
+  single = makeAwesomeIcon(
+    icon = 'user',
+    library = 'fa',
+    iconColor = 'white',
+    markerColor = ~ inci.mapcolor
+  ),
+  mult = makeAwesomeIcon(
+    icon = 'users',
+    library = 'fa',
+    iconColor = 'white',
+    markerColor = ~ inci.mapcolor
+  ))
+
+iconset.legend <- awesomeIconList(
+  `B or P killed` = makeAwesomeIcon(
+    icon = 'user',
+    library = 'fa',
+    iconColor = 'black',
+    markerColor = 'red',
+  ),
+  `Subject killed` = makeAwesomeIcon(
+    icon = 'user',
+    library = 'fa',
+    iconColor = 'black',
+    markerColor = 'blue',
+  ),
+  `Multiple fatalities` = makeAwesomeIcon(
+    icon = 'users',
+    library = 'fa',
+    iconColor = 'black',
+    markerColor = 'white',
+  ))
+
+labs <- with(incidents.as, 
+             as.character(paste("fatalities:", 
+                                fatalities, '<br>',
+                                "injuries:",
+                                total.injuries, '<br>',
+                                'by', agency, '<br>',
+                                'date: ', format(date, format="%m/%d/%y"))))
+
+map <- leaflet(
+  data = incidents.as, 
+  width = "100%") %>% 
+  addTiles() %>%
+  
+  addAwesomeMarkers( ~ long, ~ lat,
+                     popup = ~ url_click,
+                     label = lapply(labs, htmltools::HTML),
+                     icon = ~iconset[inci.mapmult]) %>%
+  
+  addLegendAwesomeIcon(iconSet = iconset.legend,
+                       orientation = 'vertical',
+                       title = htmltools::tags$div(
+                         style = 'font-size: 10px;',
+                         'Incident type'),
+                       labelStyle = 'font-size: 8px;') %>%
+  
+  leaflet.extras::addResetMapButton()
+map
+
+```
+
+____
+
+## Table of fatalities
+
+```{r stops.table}
+
+fatalities.as %>%
+  select(name, date, victim, county, agency, url_click) %>%
+  mutate(agency = gsub("Washington", "WA", agency),
+         agency = gsub("County Sheriff's Office", "Co SO", agency),
+         agency = gsub("Police Department", "PD", agency),
+         agency = gsub("State Patrol", "SP", agency)) %>%
+  rename(`link to article` = url_click) %>%
+  arrange(desc(date)) %>%
+  DT::datatable(rownames = F,
+                caption = "Persons killed after attempted stops since 2015",
+                filter = 'top',
+                escape = FALSE,
+                extensions = 'Buttons', 
+                options = list(
+                  dom = 'Bfrtip',
+                  buttons = c('copy', 'csv', 'excel', 'pdf', 'print')) )
+```
+
+# Was it worth it?  Some examples
+
+This report has documented some of the collateral damage caused by police pursuits. No pursuit is begun with the intention of killing uninvolved bystanders, but every pursuit brings that risk.  Is the risk worth it?  Consider the incidents below.  
+
+* [Kimberly Winslow](https://q13fox.com/2019/11/24/woman-dies-after-crashing-car-into-tree-in-federal-way-6-year-old-in-car-uninjured/) was killed when she crashed into a tree while being pursued by Tacoma police for an alleged speeding violation. Her 9 year old son was in the car with her at the time, he was injured but survived. 
+
+* [State Trooper Justin Robert Schaffer](https://www.chronline.com/stories/man-convicted-in-death-of-state-trooper-justin-schaffer-sentenced-to-45-years-in-prison,296378) was killed while laying down spike strips to disable a fleeing vehicle during a pursuit. He was hit by the fleeing vehicle. The pursuit started when a deputy with the Thurston County Sheriff’s Office identified a suspect in a shoplifting incident from the day before and initiated a traffic stop.
+
+* [Kent Officer Diego Moreno](https://www.kentreporter.com/news/kent-teen-pleads-guilty-to-murder-of-kent-police-officer-moreno/) was also killed laying down spike strips, but he was hit by the patrol car that was chasing the subject.  The pursuit began when the subjects allegedly fired a gun in the air during a dispute in a parking lot at a bar and restaurant, and fled when they saw the police car.
+
+* [Delilah Minshew, 6 yrs old, and Timothy Escamilla, 8 yrs old](https://www.yakimaherald.com/news/local/crime_and_courts/affidavit-troopers-tried-four-times-to-stop-driver-accused-of-killing-two-children-in-i/article_a4c3021e-bd52-11ed-8115-dfe44d5c6c2b.html)  A speeding car going the wrong way on I-82 caused a head-on collision that killed two children in the other car. Multiple officers, from both the Washington State Patrol and the Sunnyside police department had begun pursuits of this vehicle in the previous hour, but terminated them due to safety concerns.  The driver was charged with DUI, and under the WA state pursuit policy, reasonable suspicion of DUI allowed for pursuit. 
+
+  At the time of the crash, the final pursuit (4 in total) had been terminated 10 minutes earlier. For that reason, this case is classified as “pursuit-involved” rather than “active pursuit,” and is not included in the active pursuit vehicular fatality count in the graphic above (see the next section and the Data section of the report for more details on definitions). This case is included in the analysis above where pursuit-involved incidents are examined. 
+  
+  A [similar incident](https://livingsnoqualmie.com/washington-state-troopers-intercept-a-wrong-way-driver-on-i-90-spotted-in-north-bend/) involving a wrong way driver on an interstate highway was handled differently, and resulted in no fatalities. 
+
+
+# Data 
+
+## Sources {.tabset .tabset-pills}
+ 
+### The data we do use
+
+The data we use come from several publicly available open-source projects:
+
+* [Fatal Encounters Project (FE)](https://fatalencounters.org) -- a legacy dataset covering 2000-2021.  Their inclusion criteria covers all fatalities from police vehicular pursuits, including accidents, suicides and vehicular homicides.
+
+* [Mapping Police Violence Project (MPV)](https://mappingpoliceviolence.org/) -- actively updating, with data going back to 2013.  MPV excludes most vehicular pursuit fatalities, but will capture persons who are shot after a police pursuit and people killed directly by police during pursuits.
+
+* [Washington Post Police Shootings Project (WaPo)](https://www.washingtonpost.com/graphics/investigations/police-shootings-database/) -- a legacy dataset covering 2015-2025. Includes only persons shot by police. 
+
+* [A locally maintained dataset for WA state only](https://github.com/nextstepswa/WA-FEWP) -- actively updating, using the same inclusion criteria as Fatal Encounters.
+
+These sources are initially used to create a dataset of all persons killed by police in WA (code and data available in [this GitHub repository]((https://github.com/nextstepswa/WA-FEWP)). The subset of persons killed during vehicular pursuits is extracted from these data and used as the basis of this report.  The code and data for cleaning, merging and analyzing the data for this report can be found in [this GitHub repository](https://github.com/nextstepswa/Pursuits).
+
+It is worth noting that the FE project collected the only crowd-sourced incident-based dataset of people killed by police that included all fatalities from police pursuits.  Updating for the FE project was taken over by MPV in 2022, however the MPV project has a more restrictive inclusion criteria for pursuit-related deaths:  they only include fatalities directly caused by a police action -- running someone over or intentional collisions and vehicle disabling during a pursuit that leads to a fatal accident. As they note [on their website](https://mappingpoliceviolence.us/aboutthedata) (and can be confirmed by our data) these criteria result in the exclusion of most vehicle pursuit-related fatalities, and virtually all of the bystander fatalities.  The lethal risks of police pursuits are simply not captured by the MPV data.
+
+For this reason we have been manually updating the FE data for WA State since FE stopped updating, replicating the original Fatal Encounters search methods and inclusion criteria.
+
+Every record in the dataset includes ID fields that allow cases to be deduplicated and matched across the datasets:  MPV, FE, WaPo, and the WA local data.  The presence/absence of the project-specific ID tags shows there is substantial overlap in the data sources used in this report: 
+
+
+```{r tabAllCases}
+
+tab <- fatalities.all %>%
+  filter(vpursuit != "Reviewed not related") %>%
+  group_by(Year = as.character(year)) %>%
+  summarize(FE.ID = sum(!is.na(feID)),
+            MPV.ID = sum(!is.na(mpvID)),
+            WaPo.ID = sum(!is.na(wapoID)),
+            WaLocal.ID = sum(!is.na(waID)),
+            Total.Cases = n()
+  ) %>%
+  mutate(Percent = round(100*Total.Cases/sum(Total.Cases), 1)) %>%
+
+  add_row(Year = "Total", summarise(., across(where(is.numeric), sum)))
+
+tab %>%
+  kable(caption = "Dataset Coverage by Year") %>%
+  kable_styling(bootstrap_options = c("striped","hover")) %>%
+  add_header_above(header = c(" " = 1, "Data Source" = 4, "Yearly totals"=2)) %>%
+  row_spec(dim(tab)[1], bold = T)  %>%
+  column_spec(which(names(tab)=="Total.Cases"), bold=T) %>%
+  column_spec(which(names(tab)=="Percent"), italic=T) %>%
+
+  add_footnote(label = "Percents may not sum to 100 due to rounding",
+               notation = "none") %>%
+  add_footnote(label = "Data table includes fatalities from patrol vehicle accidents and attempted stops, these are often excluded in the report tables and graphs",
+               notation = "none")
+
+```
+
+____
+
+### The data we don't use
+
+The official government source of data for police pursuit fatalities is the [Fatality Analysis Reporting System (FARS)](https://www.nhtsa.gov/crash-data-systems/fatality-analysis-reporting-system) maintained by the National Highway Traffic Safety Agency (NHTSA).  Locally, the Washington State Traffic Safety Commission (WTSC) collects and codes these data and sends them to the national program.  We do not use these data for several reasons:
+
+* **The official data have a long publication lag.**
+
+  Both the WTSC and FARS datasets are only updated once a year, and those updates can take several months to a year to be released.  This time lag makes it impossible to use  these datasets to assess impacts of recent policy changes.  Note that in Washington, real time police traffic collision reports (PTCRs) can be accessed through the Washington State Patrol Collision Analysis Tool [here](https://fortress.wa.gov/wsp/collisionanalysistool/), but these do not identify pursuit-related incidents.
+  
+* **The official data do not include after pursuit fatalities.**
+
+  FARS is a program designed to provide data on fatalities from vehicle accidents only.  After pursuit fatalities will not be captured by this system.
+
+* **The official data likely undercount pursuit vehicular fatalities.**
+
+  The WTSC and FARS were not originally designed to provide accurate data on pursuit fatalities.  The "police pursuit involved" tag was added in 1994 to FARS ([p. 91, FARS Users Manual](https://crashstats.nhtsa.dot.gov/Api/Public/Publication/813254)).  The way in which this is captured likely varies across the states.  Here in WA, the WTSC tags an incident as pursuit-related through a labor-intensive manual coding of the law enforcement narrative documents submitted with the Police Traffic Collision Report (PTCR). If the pursuit is not mentioned in the narrative, if there is no narrative, or if the coder fails to tag a case, a pursuit incident will fail to be identified.  The likelihood that this results in under-identification of pursuit-related fatalties was acknowledged by the Research Director of the WTSC [in a recent interview](https://www.axios.com/local/seattle/2023/02/23/police-vehicle-pursuits-washington-state-2023).
+  
+  Incomplete coverage of fatalities related to police activities is unfortunately the norm in official datasets.  Homicides by police have been found to be undercounted by about 50% in official government data sources like the [Arrest Related Death Program](https://bjs.ojp.gov/library/publications/assessment-coverage-arrest-related-deaths-program), the [National Vital Statistics System](https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1002399) and the [Uniform Crime Reports](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1447919/).  The most recent analysis to have replicated this finding is from the Institute for Health Metrics and Evaluation at the UW in 2021, published in the Lancet, one of the most respected peer-reviewed science publications in the world.  You can access that paper online [here](https://www.thelancet.com/journals/lancet/article/PIIS0140-6736(21)01609-3/fulltext). 
+  
+  It is worth noting that the undercounts were documented and quantified by comparing official data to open-source data like Fatal Encounters.  The open source methodology is now [recommended even by federal agencies](https://bjs.ojp.gov/library/publications/arrest-related-deaths-program-pilot-study-redesigned-survey-methodology) as a way to improve official data collection.
+
+* **The official data do not provide key information on the individual incidents.**
+
+  FARS also does not include information on the law enforcement agenc(ies) involved in the pursuit.  The local WTSC data has information on the agency that reported the incident and the agency that is investigating the incident, which may or may not be the agency involved in the pursuit.  
+   
+   By contrast, detailed incident-based information *is* available in the data from Fatal Encounters.  The document link provided for each case in the Fatal Encounters dataset contains a wealth of additional contextual information, and serves as a springboard for further research on individual cases.  These media reports also help to remind us that each of these "cases" is a person, someone from our community, and not just a number.
+
+The Fatal Encounters dataset is not perfect.  It also likely undercounts the true number of fatalities associated with pursuits, as the search methods used by the project rely on the incidents leaving a digital signature online, and not all pursuit fatalities will be reported this way.  It does, however, provide more complete information, on a wider range of cases, and in a more timely manner, than the official data.  
+
+
+> The number of fatalities we report here gives a *lower bound* on the true number vehicle pursuit-related fatalities.  There may be more, but there will not be less.
+
+
+____
+
+## Coding
+
+The original data sources are not designed to facilitate direct analysis of vehicular pursuits.  So we have identified and coded these cases by hand, with two independent coders for all Fatal Encounters records in Washington State since January 1 2015.  
+
+### Data cleaning
+
+We begin with a dataset that merges information on fatalities in WA state from the MPV, FE, WaPo and the WA local datasets.  The data are cleaned and new variables constructed to facilitate analysis.  Any errors found are corrected.  Updates to the cleaned dataset are made a few times a month.
+
+More information can be found in [this report](https://rpubs.com/moxbox/wa_since2015), which also has links to the GitHub repository that hosts all of the basic data cleaning and analysis scripts.
+
+
+### Case inclusion/exclusion in this report
+
+The source dataset keeps track of all persons killed during police encounters, regardless of who committed the homicide.  For this pursuit report we include/exclude the following types of cases:  
+
+#### Inclusion
+
+* We retain vehicular homicides committed by the driver fleeing a police pursuit. This is a key contributor to the risks that police pursuits pose to the general public.  
+
+* We retain after-pursuit suicides.  This term refers to a person taking their own life with a gun, not to "suicide by cop."  The classification is based on the media report, which typically relies on a coroner's or medical examiner's determination.  These cases are identified separately in the report tables and graphics. 
+
+#### Exclusion
+
+* We exclude fatalities from non-pursuit related on-duty patrol car accidents.
+
+* We exclude fatalities resulting from encounters with police that have no pursuit involvement.
+
+Of the the `r nrow(wa_2015)` cases in the merged WA dataset, the number of fatalities excluded is `r nrow(wa_2015) - nrow(fatalities.all)` cases), the number of fatalities included is (`r paste("n =", nrow(fatalities.all))`), and the final number of incidents is (`r paste("n =", nrow(incidents.all))`).
+
+
+### Pursuit review
+
+All cases in the larger WA dataset were reviewed for evidence of pursuit involvement and coded into categories.  
+
+We reviewed all evidence available in the original source datasets, including variables coded by FE, MPV and WaPo and the link to the original verification document (typically a news article).  We conducted additional online searches to find other media reports, coroner/ME reports, social media posts, and Law Enforcement Agency announcements.  Using this information we classified cases into the following categories:
+
+* *Active Pursuit* -- vehicular homicides from an active pursuit (e.g., a crash-related fatality, or someone getting run over).  
+
+* *Terminated pursuit* -- vehicular homicides from an active pursuit that was reportedly terminated just before the accident occurred.  "Just before" means within a minute or a mile.
+
+* *Involved pursuit * -- a vehicle pursuit occurred during the incident, but it had finished before the person was killed.  Typically the person killed in these cases is a fleeing subject who is either shot by police at the end of the chase, or their death is ruled a suicide due to a self-inflicted gunshot.   Less commonly, if police terminate a pursuit the subject may continue to flee for some time, and cause a vehicular homicide that happens well after the end of the pursuit.  In these cases the fatality may be an uninvolved bystander or passenger.
+
+* *Attempted stop* -- vehicular homicides that occur when the subject flees a traffic stop but is not pursued.  We often have to rely on a media report of the law enforcement statement that there was no pursuit, but the patrol car lights and/or siren may have been activated.
+
+* *Vehicle accident* -- vehicular homicides by police that are not related in any way to a pursuit (e.g., an on-duty officer ran someone over).
+
+* *Reviewed not related* -- all other incidents we reviewed and determined were not related to vehicle stops/accidents/pursuits.
+
+The variable in the dataset that contains this coded information is "vpursuit".
+
+
+### Final categories
+
+We grouped the active and terminated pursuits together into the "Pursuit vehicular homicide" category, and split the involved pursuits into "After pursuit homicides" and "After pursuit suicides".  These are the three types of pursuit-related fatalities that are the primary focus of this report.
+
+
+```{r case.definition}
+tbl <- fatalities.all %>%
+  mutate(vpursuit = factor(vpursuit,
+                           levels = c("Active pursuit", "Terminated pursuit",
+                                      "Involved pursuit", "Attempted stop",
+                                      "Vehicle accident", "Reviewed not related"))) %>%
+  group_by(vpursuit, incident.type) %>%
+  count() %>%
+  tidyr::pivot_wider(id_cols=vpursuit, names_from = incident.type, values_from = n) %>%
+  mutate(across(where(is.numeric), ~replace_na(.x, 0)))
+
+  
+
+tbl %>% kbl(caption = "Coding results") %>%
+  kable_styling(bootstrap_options = "striped")
+  
+```
+
+Some tables in the beginning of the [Pursuit Statistics](#pursuit-statistics) section exclude just the non-pursuit related accidents, but retain the attempted stop fatalities, to establish the relative number of pursuit-related fatalities compared to fatalities from all police encounters.
+
+The majority of the report focuses on the two pursuit-related fatality categories:  pursuit vehicular fatalities (`r paste("n =", nrow(fatalities.pvf))`) and after-pursuit fatalities
+(`r paste("n =", nrow(fatalities.apf))`).  These two categories are presented separately in the pursuit statistics for persons, and combined but distinguished by color in the pursuit statistics for incidents.
+
+____
+
+### Coding vehicular fatality victim types
+
+Vehicular fatalities are defined as cases where the cause of death is a vehicle.  This includes fatalities from active and terminated pursuits, attempted stops and vehicle accidents. There are also a few "Involved pursuit" incidents where a vehicle is the cause of death.  In one the subject's car was stopped after a pursuit and he fled by foot onto I5 where he was hit and killed.  In another the officer was making a u-turn at the start of the pursuit, and the subject crashed into them and died.
+
+For each vehicular fatality we coded
+
+* The status of the person(s) killed: subject (the driver of the vehicle being pursued), passenger (in the fleeing vehicle), bystander or officer.
+
+* Whether there were any additional injuries noted in the supporting documents (again coding status of the injured person).
+
+
+____
+
+## What we miss
+
+Our ability to identify and track these incidents is far from perfect.  The two key limitations are:
+
+1. This is a fatality-based dataset, not a dataset of pursuits.
+
+  The data we have *only includes pursuits from incidents that result in at least one fatality* -- so: 
+
+  * We miss pursuits that result in accidents that cause injuries and/or property damage only 
+
+  * We miss pursuits that end without accidents or fatalities
+
+  For this reason, we are not able to estimate the total number of pursuits, or the fraction of pursuits that lead to fatalities, injuries or property damage.
+
+2. We rely on online documents to find and code these cases. 
+
+* We miss incidents that do not leave an online trace, or if our search methods do not capture that trace
+
+* We miss incidents if the document reports the fatality but fails to report on the pursuit
+
+* We may misclassify a case if the document has not included the necessary information
+
+We rely on the level of detail reported in the online documents to find these cases.  Those documents, in turn, typically rely on a press release or social media post from the involved law enforcement agency.  The law enforcement description of the event is rarely verified with independent sources, unless it becomes a high profile case and comes under scrutiny. 
+
+
+
+____
+
+### Ambiguous cases
+
+In 2 incidents, the information available in the media report left it somewhat unclear whether the incident should be classified as a pursuit or as an attempted stop:  Robert Bray (9/25/2022) and Stephanie Laguardia (3/16/2022).  We coded these as pursuits, given the balance of the evidence.  If these cases were instead coded as attempted stops, they would be removed from the pursuit vehicular fatality count.  Since both of these cases occurred during the reform period, 
+
+* the pre v. post reform comparison of fatalities would change, from 
+`r pre.reform.num.pvf` vs `r reform.num.pvf` to
+`r pre.reform.num.pvf` vs `r reform.num.pvf - 2`,
+and the estimated percentage reduction in fatalities after the pursuit policy reforms would be
+`r scales::percent(abs((reform.num.pvf - 2)/pre.reform.num.pvf -1))`.
+
+```{r}
+pre.rollback.num.chg = sum(date.pre.rollback.window <= as.Date("2022-09-25"), date.pre.rollback.window <= as.Date("2022-03-16"))
+```
+
+* the pre v. post rollback comparison of fatalities would change, but the change will depend on the number of days in the lookback window.  As of the date of this report, format(Sys.Date(), "%B %d, %Y"), the change would be from 
+`r pre.rollback.num.pvf` vs `r rollback.num.pvf` to
+`r pre.rollback.num.pvf - pre.rollback.num.chg` vs `r rollback.num.pvf`,
+and the estimated percentage increase in fatalities after the pursuit policy rollback would be
+`r scales::percent(abs(rollback.num.pvf/(reform.num.pvf - pre.rollback.num.pvf - pre.rollback.num.chg) -1))`.
+
+In 1 incident, the events lay on the boundary of the pursuit category:  Sergey Pavlovich (6/28/2019).  Here the officer reportedly was making a U-turn in response to a 911 call for speeding motorcycles, and saw the motorcycles approaching him at the time.  Pavlovich crashed his motorcycle into the patrol car and was killed.  It is unclear whether the officer intended to give pursuit.  We coded this case as "pursuit-involved", but it could also be considered a "Vehicular accident".  Since neither classification is included in the cases used to estimate policy impact the decision has no effect on those estimates.
+
+In 1 incident, an unusual set of events could be construed as potentially either "pursuit-involved" or "terminated pursuit".  This incident involved a speeding motorist who was pursued multiple times over the course of an hour by 4 different state patrol troopers and by local police.  In each instance, the pursuit was terminated for safety reasons, as the motorist exceeded 100 mph and was weaving in and out of traffic.  The last pursuit terminated 10 minutes before the motorist, still travelling at high speed and headed down the wrong way of a highway exit ramp, crashed into another vehicle, killing 2 people in that vehicle.  Since the pursuit was terminated 10 minutes before the crash, and our definition of terminated pursuits requires termination within a minute or a mile of the vehicular homicide, we classified this incident as "pursuit-involved".  If this were classified instead as a "terminated pursuit", the definition change would require reclassifying other cases for consistency, and without doing that the change in the estimated policy impacts can not be calculated. 
+
+____
+
+## Download the data {.tabset .tabset-pills}
+
+### Persons killed
+
+This table lists all fatalities in the dataset, with some basic information, the pursuit related coding for this incident, and a link to a verification document for further details.  This document can be used as a starting place for research on this case.  
+
+The "LD" variable is the WA legislative district.  
+
+The "incident type" variable shows the coding of cases used in the report.  The "code detail" variable shows the detailed classification for each case (the "vpursuit" variable). The relationship between these two variables is shown in the [Final Categories section](#final-categories) above.
+
+Buttons for downloading the data are at the top of the table.  The table columns can be filtered and sorted as well.
+
+```{r fatalities.download}
+fatalities.p %>%
+  mutate(vpursuit = factor(vpursuit)) %>%
+  select(name, date, victim, county, agency, LD=WA_District, `incident type` = incident.type, `code detail`= vpursuit, url_click) %>%
+  mutate(agency = gsub("Washington State Patrol", "WSP", agency),
+         agency = gsub("Washington", "WA", agency),
+         agency = gsub("County Sheriff's Office", "Co SO", agency),
+         agency = gsub("Police Department", "PD", agency)) %>%
+  rename(`link to article` = url_click) %>%
+  arrange(desc(date)) %>%
+  DT::datatable(rownames = F,
+                caption = "Persons killed during police encounters since 2015",
+                filter = 'top',
+                escape = FALSE,
+                extensions = 'Buttons', 
+                options = list(
+                  dom = 'Bfrtip',
+                  buttons = c('copy', 'csv', 'excel', 'pdf', 'print')) )
+```
+
+____
+
+### Incidents
+
+This table lists the pursuit-related incidents that resulted in fatalities, with information on the agency (or agencies) involved, fatalities and injuries.  Pursuit-related incidents include pursuit vehicular fatalities from active and terminated pursuits and after-pursuit homicides and suicides.
+
+Buttons for downloading the data are at the top of the table, and the columns can be filtered and sorted.
+
+```{r incidents.download}
+incidents.p %>%
+  mutate(agency = gsub("Washington State Patrol", "WSP", agency),
+         agency = gsub("Washington", "WA", agency),
+         agency = gsub("County Sheriff's Office", "Co SO", agency),
+         agency = gsub("Police Department", "PD", agency)) %>%
+  select(Agency=agency, Date=date, LD=district, Fatalities=fatalities,
+         `P/O/B killed` = pbo.killed, 
+         `P/B injured` = pb.injured) %>%
+
+  DT::datatable(rownames = F,
+                caption = "Incidents by agency",
+                extensions = 'Buttons', 
+                options = list(
+                  dom = 'Bfrtip',
+                  buttons = c('copy', 'csv', 'excel', 'pdf', 'print')) )
+```
+
+____
+
+## GitHub respository
+
+```{r access, child='./access.Rmd'}
+```
+
+
+# Pursuit legislation
+
+## 2021 legislation
+
+The full text of HB 1054 as passed by the WA State legislature in 2021 can be found [online here](https://lawfilesext.leg.wa.gov/biennium/2021-22/Pdf/Bills/Session%20Laws/House/1054-S.SL.pdf?q=20220528115925).
+
+The section addressing vehicle pursuits reads:
+
+```{r, legislation.text.2021, out.width="120%"}
+knitr::include_graphics(here::here("Legislation", "HB1054-SECTION.PNG"))
+```
+
+## 2023 legislation
+
+The full text of SB 5352 as passed by the WA State legislature in 2023 can be found [online here](https://lawfilesext.leg.wa.gov/biennium/2023-24/Pdf/Bills/Session%20Laws/Senate/5352.SL.pdf?q=20231220183138).
+
+The current RCW can be found [online here](https://app.leg.wa.gov/RCW/default.aspx?cite=10.116.060)
+
+The section addressing the key changes to the vehicle pursuit policy reads:
+
+```{r, legislation.text.2023, out.width="120%"}
+knitr::include_graphics(here::here("Legislation", "SB5352screenshot.png"))
+```
+
+## 2024 legislation
+
+ The sections changed by Initiative 2113 read:
+
+```{r, legislation.text.2024, out.width="120%"}
+knitr::include_graphics(here::here("Legislation", "I2113screenshot.png"))
+```
+
+
+                        

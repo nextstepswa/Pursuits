@@ -1,0 +1,30 @@
+
+This report follows the principles of transparent, reproducible science.  All of the scripts, data and software are open source and freely available to the public, online.
+
+____
+
+> The scripts needed to reproduce this report are posted on our public [GitHub Pursuits Repository](https://github.com/nextstepswa/Pursuits). 
+
+____
+
+Note that the source data files must first be constructed using the scripts in the 
+[GitHub WA Fatal Encounters With Police (WA-FEWP) repository](https://github.com/nextstepswa/WA-FEWP).
+
+The software used to produce this report comes from the open-source [R project](https://www.r-project.org/).  You can view the code in the report itself by clicking the `Code` buttons in the right margin, or you can download all of the scripts from the repository.
+
+**R** is free and runs on most Unix, Windows and MacOS operating systems.  The report script uses [rmarkdown](https://bookdown.org/yihui/rmarkdown/) and [knitr](https://www.rstudio.com/tags/knitr/).
+
+
+* *If you find a bug in our code*, please let us know by posting it as an issue in the repository.
+
+* *If you have a question* about the methodology, or the data, or the topic in general, please start a thread on the [repository discussions page](https://github.com/nextstepswa/WA-FEWP/discussions/1) (note: you'll need a GitHub account -- they're free, just follow the instructions at the link).
+
+* *If you want to get involved*, please email us at [Next Steps Washington](mailto:nextstepswa@gmail.com)
+
+
+___
+
+> <p style="text-align: center;">: `r icon_style(fontawesome("r-project"), scale = 2, fill = "steelblue")` : `r icon_style(fontawesome("markdown"), scale = 2)` : `r icon_style(fontawesome("github"), scale = 2)` :</p>
+
+____
+
