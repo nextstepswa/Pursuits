@@ -6,9 +6,12 @@ library(tidyverse)
 
 # Key dates ----
 
-date.rollback = as.Date("2024-06-05") #90 days after end of session, 3/7
-date.reform = as.Date("2021-07-25")
 date.start = as.Date("2015-01-01")
+
+date.HB1054 = as.Date("2021-07-25") # Gov signed, effective 7/25
+date.SB5352 = as.Date("2023-05-03") # Immediate activation
+date.I2113 = as.Date("2024-06-05") # 90 days after end of session, 3/7
+
 today = Sys.Date()
 
 # Pre-post comparison metrics and anchors
@@ -18,32 +21,24 @@ today = Sys.Date()
 ## Reform (7/25/2024 - 6/5/2024)
 ## Rollback (6/6/2024 - current)
 
-yrs.pre = as.numeric(date.reform - date.start)/365
-yrs.reform = as.numeric(date.rollback - date.reform)/365
-yrs.rollback = as.numeric(today - date.rollback)/365
+days.pre = as.numeric(date.HB1054 - date.start)
+days.HB1054 = as.numeric(date.SB5352 - date.HB1054)
+days.SB5352 = as.numeric(date.I2113 - date.SB5352)
+days.I2113 = as.numeric(today - date.I2113)
 
-# Pre-reform period (constant)
-days.pre <- as.numeric(date.reform - date.start)
+yrs.pre = days.pre/365
+yrs.HB1054 = days.HB1054/365
+yrs.SB5352 = days.SB5352/365
+yrs.I2113 = days.I2113/365
 
-# Reform period and it's comparison window (constant)
-days.reform <- as.numeric(date.rollback - date.reform)
-date.pre.reform.window <- date.reform - days.reform
-
-# Rollback period and it's comparison window (moving update)
-# The House voted 77-20 to pass Initiative 2113, the state Senate voted 36-13
-# on Monday 3/4/2024.  Effective Date: The initiative takes effect 90 days after 
-# adjournment on 3/7/2024.  as.Date("2024-06-06") - as.Date("2024-03-07")
-
-days.rollback <- as.numeric(today - date.rollback)
-date.pre.rollback.window <- date.rollback - days.rollback
 
 # Data ----
 # Read in WA since 2015 data
 # Data and code used to construct this is available in another
 # GitHub repository:  https://github.com/nextstepswa/WA-FEWP
 
-## Initial pursuit cleaning and coding is done in ScrapeMerge.R and pursuit_coding.R
-## creates: vpursuit, victim, injury, incident.num, pursuit.type and wtsc flag variables
+## Legacy pursuit coding is recovered (pre 11/2025)
+## Current pursuit coding is done as cases are added to wa_local.xlsx file
 
 load(file = "~/GitHub/WA-FEWP/Data/Clean/WA_2015.rda")
 wa_2015 <- wa_clean_2015
@@ -57,29 +52,26 @@ load("~/GitHub/WA-LEAs/Data/Clean/WA.agencies.rda")
 
 # All cases ----
 
-## Excludes only not.kbp=1
-
 ## incident.type identifies pursuit and after pursuit cases from vpursuit
-## incident.num is < 100 for multi-fatality incidents (coded manually), and
+## pursuit.incinum is < 100 for multi-fatality incidents (coded manually), and
 ##  > 100 for single-fatality incidents though may not be stable over time
 
 ## Fatalities ----
 
 fatalities.all <- wa_2015 %>% 
-  filter(not.kbp == 0) %>%
+
   mutate(
     agency.type = case_when(
-      agency.type == "State Police" ~ "WSP", 
       grepl("Other", agency.type) ~ "Other",
       TRUE ~ agency.type),
     
     incident.type = factor(
       case_when(
-        grepl("Active|Terminated", vpursuit) ~ "Pursuit vehicular fatality",
-        grepl("Involved", vpursuit) & suicide==1 ~ "After pursuit suicide",
-        grepl("Involved", vpursuit) ~ "After pursuit homicide",
-        vpursuit == "Attempted stop" ~ "Attempted stop fatality",
-        grepl("accident", vpursuit) ~ "Vehicle accident fatality",
+        grepl("Active|Terminated", pursuit.type) ~ "Pursuit vehicular fatality",
+        grepl("Involved", pursuit.type) & mod == "Suicide" ~ "After pursuit suicide",
+        grepl("Involved", pursuit.type) ~ "After pursuit homicide",
+        pursuit.type == "Attempted stop" ~ "Attempted stop fatality",
+        grepl("accident", pursuit.type) ~ "Vehicle accident fatality",
         TRUE ~ "All other fatalities"),
       levels = c("After pursuit homicide", "Pursuit vehicular fatality", 
                  "After pursuit suicide", "Attempted stop fatality", 
@@ -91,18 +83,21 @@ fatalities.all <- wa_2015 %>%
                      TRUE ~ "Other"),
     cod3 = forcats::fct_relevel(cod3, "Other", after=Inf),
     policy.period = case_when(
-      date < date.reform ~ "pre",
-      date >= date.reform & date < date.rollback ~ "reform",
-      date >= date.rollback ~ "rollback"),
-    reform.period = ifelse(policy.period == "reform", 1, 0),
-    rollback.period = ifelse(policy.period == "rollback", 1, 0)
+      date < date.HB1054 ~ "pre",
+      date >= date.HB1054 & date < date.SB5352 ~ "HB1054",
+      date >= date.SB5352 & date < date.I2113 ~ "SB5352",
+      date >= date.I2113 ~ "I2113"),
+    policy.period = factor(policy.period,
+                           levels = c("pre", "HB1054", "SB5352", "I2113")),
+    reform.period = ifelse(policy.period %in% c("HB1054", "SB5352"), 1, 0),
+    rollback.period = ifelse(policy.period == "I2113", 1, 0)
   ) %>%
   arrange(desc(incident.type), date) %>%
   mutate(
     incident.num = if_else(
-      !is.na(incident.num), incident.num, # multiple fatalities, same incident
+      !is.na(pursuit.incinum), pursuit.incinum, # multiple fatalities, same incident
       100 + as.numeric(rownames(.))),
-    victim = factor(victim,
+    victim = factor(pursuit.victim,
                     levels = c("Officer", "Bystander", "Passenger", "Subject")))
 
 ## Incidents ----
@@ -116,7 +111,7 @@ incidents.all <- fatalities.all %>%
     day = first(day),
     leg.year = first(leg.year),
     policy.period = first(policy.period),
-    vpursuit = first(vpursuit),
+    pursuit.type = first(pursuit.type),
     incident.type = first(incident.type),
     lat = first(latitude),
     long = first(longitude),
@@ -131,17 +126,17 @@ incidents.all <- fatalities.all %>%
     inci.mapmult = ifelse(fatalities==1, "single", "mult"),
     
     # For now, the rest are for vehicle-related incidents only
-    # So are NA for "not related" cases
+    # So are NA for "Not pursuit related" cases
     
-    subjects.killed = ifelse(grepl("not related", vpursuit), NA_real_, 
+    subjects.killed = ifelse(grepl("Not pursuit related", pursuit.type), NA_real_, 
                              sum(grepl("Subject", victim))), # one IP case also had officer shot
     passengers.killed = sum(victim=="Passenger"),
     bystanders.killed = sum(victim=="Bystander"),
     officers.killed = sum(victim=="Officer"),
-    subjects.injured = ifelse(grepl("not related", vpursuit), NA_real_, sum(grepl("Subject", injury))),
-    passengers.injured = ifelse(grepl("not related", vpursuit), NA_real_, sum(grepl("Passenger", injury))),
-    bystanders.injured = ifelse(grepl("not related", vpursuit), NA_real_, sum(grepl("Bystander", injury))),
-    officers.injured = ifelse(grepl("not related", vpursuit), NA_real_, sum(grepl("Officer", injury)))
+    subjects.injured = ifelse(grepl("Not pursuit related", pursuit.type), NA_real_, sum(grepl("Subject", pursuit.injury))),
+    passengers.injured = ifelse(grepl("Not pursuit related", pursuit.type), NA_real_, sum(grepl("Passenger", pursuit.injury))),
+    bystanders.injured = ifelse(grepl("Not pursuit related", pursuit.type), NA_real_, sum(grepl("Bystander", pursuit.injury))),
+    officers.injured = ifelse(grepl("Not pursuit related", pursuit.type), NA_real_, sum(grepl("Officer", pursuit.injury)))
   ) %>%
   
   rowwise() %>%
@@ -179,7 +174,7 @@ incidents.all <- fatalities.all %>%
 ### Fatalities ----
 
 fatalities.p <- fatalities.all %>% 
-  filter(grepl("Pursuit|pursuit", incident.type)) %>%
+  filter(grepl("Pursuit|After", incident.type)) %>%
   mutate(incident.type = factor(incident.type,
                                 levels = c("After pursuit suicide", "After pursuit homicide",
                                            "Pursuit vehicular fatality")))
@@ -188,7 +183,7 @@ fatalities.p <- fatalities.all %>%
 ### this is used for mapping and agency analyses
 
 incidents.p <- incidents.all %>%
-  filter(grepl("Pursuit|pursuit", incident.type)) %>%
+  filter(grepl("Pursuit|After", incident.type)) %>%
   mutate(incident.type = factor(incident.type,
                                 levels = c("After pursuit suicide", "After pursuit homicide",
                                            "Pursuit vehicular fatality")))
@@ -281,13 +276,12 @@ agency.fatality.p.long <- agency.fatality.p.wide %>%
                                agency.type)
   )
 
-### Agency fatality counts by policy.period since 2015 ----
+### Agency FATALITY counts by policy.period since 2015 ----
 ### One record per agency
 ### fatalities counted multiple times if multiple agencies involved
 
 agency.fatalities.period <- agency.fatality.p.long %>%
   
-  # 3 periods:  pre, reform and rollback
   group_by(agency, policy.period) %>%
 
   summarize(fatalities=n(),
@@ -304,15 +298,15 @@ agency.fatalities.period <- agency.fatality.p.long %>%
               names_from = policy.period,
               values_from = fatalities:officers
               ) %>%
-  select(agency, agency.type, contains("pre"), contains("reform"), contains("rollback")) %>%
-  mutate(fatalities_tot= sum(fatalities_pre, fatalities_reform, fatalities_rollback, na.rm=T),
+  select(agency, agency.type, contains("pre"), contains("HB"), contains("SB"), contains("I2")) %>%
+  mutate(fatalities_tot = sum(across(contains("fatalities_")), na.rm=T),
          pursuit.veh.fatalities_tot = sum(across(contains("pursuit.veh.fatalities")), na.rm=T) ,
          after.pursuit.homicides_tot = sum(across(contains("after.pursuit.homicides")), na.rm=T),
          after.pursuit.suicides_tot = sum(across(contains("after.pursuit.suicides")), na.rm=T),
          subjects_tot = sum(across(contains("subjects")), na.rm=T),
          bystanders_tot = sum(across(contains("bystanders")), na.rm=T),
          passengers_tot = sum(across(contains("passengers")), na.rm=T),
-         officers_tot = sum(across(contains("officers_pre")), na.rm=T)
+         officers_tot = sum(across(contains("officers")), na.rm=T)
   ) %>%
   
   # merge on selected agency info
@@ -361,13 +355,12 @@ agency.incident.p.long <-
                                agency.type)
   )
 
-### Agency incident totals by period since 2015 ----
+### Agency INCIDENT totals by period since 2015 ----
 ### One record per agency
 ### incidents will be counted multiple times if multiple agencies involved
 
 agency.incidents.period <- agency.incident.p.long %>%
   
-  # 3 periods:  pre, reform and rollback
   group_by(agency, policy.period) %>%
   
   summarize(incidents=n(),
@@ -380,8 +373,8 @@ agency.incidents.period <- agency.incident.p.long %>%
               names_from = policy.period,
               values_from = incidents:after.pursuit.suicides
   ) %>%
-  select(agency, agency.type, contains("pre"), contains("reform"), contains("rollback")) %>%
-  mutate(incidents_tot= sum(incidents_pre, incidents_reform, incidents_rollback, na.rm=T),
+  select(agency, agency.type, contains("pre"), contains("HB"), contains("SB"), contains("I2"))%>%
+  mutate(incidents_tot= sum(across(contains("incidents_")), na.rm=T),
          pursuit.veh.incidents_tot = sum(across(contains("pursuit.veh.incidents")), na.rm=T) ,
          after.pursuit.homicides_tot = sum(across(contains("after.pursuit.homicides")), na.rm=T),
          after.pursuit.suicides_tot = sum(across(contains("after.pursuit.suicides")), na.rm=T)
@@ -415,7 +408,7 @@ pct.subject.pvf <- sum(fatalities.pvf$victim == "Subject")/nrow(fatalities.pvf)
 
 ## % of all fatal incidents that involve Pursuits
 ## (incl active & after, with suicides)
-pct.i.p <- nrow(incidents.p) / nrow(incidents.all)
+pct.incidents.p <- nrow(incidents.p) / nrow(incidents.all)
 
 
 # Index plot helpers ----
