@@ -1,0 +1,37 @@
+# Ignore everything
+/*
+
+# Except:
+
+!.gitignore
+
+
+# Data construction scripts
+!/Construction
+/Construction/*
+!/Construction/make*
+
+# Data folder setup
+!/Data
+/Data/*
+!/Data/Clean/WA_2015.rda
+!/Data/Clean/WA_agencies.2025.rda
+
+# Report replication script
+!/Report
+/Report/*
+!/Report/*.Rmd
+
+# The image folder
+!/Images
+/Images/*
+!/Images/*.PNG
+!/Images/*.png
+
+# The legislation folder
+!/Legislation
+/Legislation/*
+!/Legislation/*.PNG
+!/Legislation/*.png
+
+.Rproj.user
