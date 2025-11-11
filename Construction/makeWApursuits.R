@@ -33,22 +33,24 @@ yrs.I2113 = days.I2113/365
 
 
 # Data ----
-# Read in WA since 2015 data
-# Data and code used to construct this is available in another
+# Read in WA-FEWP since 2015 data
+# Code used to construct this is available in another
 # GitHub repository:  https://github.com/nextstepswa/WA-FEWP
 
-## Legacy pursuit coding is recovered (pre 11/2025)
-## Current pursuit coding is done as cases are added to wa_local.xlsx file
 
-load(file = "~/GitHub/WA-FEWP/Data/Clean/WA_2015.rda")
+load(file = here::here("Data", "Clean", "WA_2015.rda"))
 wa_2015 <- wa_clean_2015
 
 min.yr <- min(wa_2015$year)
 max.yr <- max(wa_2015$year)
 
-## Agency data
+## Agency data ----
+## This file contains cleaned and merged data on WA LEAs from 3 sources (WASPC, NIBRS, FBI)
+## It is updated 1/yr and involves some manual tasks, so the script is not included here,
+## just the resulting datafile.  
+## Date refers to year constructed; datafiles lag by a year or more
 
-load("~/GitHub/WA-LEAs/Data/Clean/WA.agencies.rda")
+load(here::here("Data", "Clean", "WA.agencies.2025.rda"))
 
 # All cases ----
 
