@@ -544,7 +544,7 @@ Since more than one person may be killed in an incident the number of incidents 
 
 ____
 
-> Pursuits are involved in `r scales::percent(pct.p)` of fatal police encounters.
+> Pursuits are involved in `r scales::percent(pct.p)` of fatal encounters with police.
 
 ____
 
@@ -2137,7 +2137,7 @@ The primary data source is MPV, but due to coverage limitations in the MPV proje
 
 ____
 
-> For the purposes of this report, we call the resulting dataset the WA local dataset.
+> For the purposes of this report, we call the resulting merged dataset the "WA local" dataset.
 
 ____
 
@@ -2175,7 +2175,7 @@ tab <- fatalities.vehicle.related %>%
 tab %>%
   kable(caption = "Source Coverage by Year") %>%
   kable_styling(bootstrap_options = c("striped","hover")) %>%
-  add_header_above(header = c(" " = 1, "Data Source" = 5, "De-duplicated yearly totals"=2)) %>%
+  add_header_above(header = c(" " = 1, "Fatalities covered by each data source" = 5, "De-duplicated yearly totals"=2)) %>%
   row_spec(dim(tab)[1], bold = T)  %>%
   column_spec(which(names(tab)=="Cases"), bold=T) %>%
   column_spec(which(names(tab)=="Percent"), italic=T) %>%
@@ -2184,7 +2184,7 @@ tab %>%
                notation = "symbol")
 ```
 
-##### Source overlap by year
+##### Source overlap
 
 Each case in the dataset can also be identified by the number of sources that include it, a direct measure of the overlapping sources of information.  The breakdown of source overlap by year is shown below. 
 
@@ -2202,7 +2202,7 @@ tab <- fatalities.vehicle.related %>%
 tab %>%
   kableExtra::kbl(caption = "Breakdown of fatalities by number of data sources and year") %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
-  add_header_above(header = c(" " = 1, "Data Source(s) *" = 4, " " = 1)) %>%
+  add_header_above(header = c(" " = 1, "Number of data source(s) for each fatality *" = 4, " " = 1)) %>%
   row_spec(which(tab$Year == "Total"), bold=T) %>%
   add_footnote(label = "Most records in MPV and WA can be found in multiple sources, see other tabs for details on the overlap",
                notation = "symbol")
@@ -2238,7 +2238,7 @@ tab <- fatalities.vehicle.related %>%
 tab %>%
   kableExtra::kbl(caption = "Primary data source by year") %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
-  add_header_above(header = c(" " = 1, "Primary Data Source *" = 4, " " = 1)) %>%
+  add_header_above(header = c(" " = 1, "Primary data source for each fatality *" = 4, " " = 1)) %>%
   row_spec(which(tab$Year == "Total"), bold=T) %>%
   add_footnote(label = "Most records in MPV and WA can be found in multiple sources, see other tabs for the overlap",
                notation = "symbol")
@@ -2258,11 +2258,11 @@ MPV has incorporated historical data from two legacy projects:
 
 * the [Fatal Encounters project](https://fatalencounters.org/) 2000-2021, and 
 
-* the [Washington Post Police Fatal Force project]((https://www.washingtonpost.com/graphics/investigations/police-shootings-database/) 2015-2025.   
+* the [Washington Post Police Fatal Force project](https://www.washingtonpost.com/graphics/investigations/police-shootings-database/) 2015-2025.   
 
 MPV merged and deduplicated the incidents from these two datasets, removed incidents that did not meet their inclusion criteria, added eligible incidents that were missed by both projects, kept the information from both datasets on the included incidents, and is now augmenting all incidents (back through 2013) with additional information, as well as updating with new incidents. 
 
-MPV is a project of the [Campaign Zero](https://campaignzero.org/) organization.  It follows the principles of transparent reproducible research, with a systematic, multi-level review and coding process that is published on their [methodology page](https://mappingpoliceviolence.org/files/MappingPoliceViolence_Methodology.pdf) (recommended reading), and datasets provided in downloadable form to the public.
+MPV is a project of the [Campaign Zero](https://campaignzero.org/) organization.  They follow the principles of transparent reproducible research, with a systematic, multi-level review and coding process that is published on their [methodology page](https://mappingpoliceviolence.org/files/MappingPoliceViolence_Methodology.pdf) (recommended reading), and datasets provided in downloadable form to the public.
 
 We download the MPV data from here:  https://mappingpoliceviolence.us/s/MPVDatasetDownload.xlsx.
 
@@ -2272,11 +2272,13 @@ ____
 
 *Data: 2021+*
 
-IncarcerNation (IN) maintains a comprehensive, searchable website listing every fatality that has occurred during any police encounter in the United States, regardless of type, and without judgment. This includes deaths from direct police use of force [gunshots, tasers, K9, and other immediate lethal police action], as well as fatalities linked to police activities and interactions controlled by police that lead to death. These encompass high-speed pursuits (including deaths of drivers, passengers, bystanders, and pedestrians), collisions involving police vehicles, drownings during police chases, falls from heights during pursuit, asphyxiation during restraint, and suicides occurring in the context of police operations, often during SWAT incidents. ([taken from their "About Us" page](https://incarcernation.com/about-us/)).
+IncarcerNation (IN) maintains a comprehensive, searchable website listing every fatality that has occurred during any police encounter in the United States, regardless of type, and without judgment. This includes deaths from direct police use of force [gunshots, tasers, K9, and other immediate lethal police action], as well as fatalities linked to police activities and interactions controlled by police that lead to death. These encompass high-speed pursuits (including deaths of drivers, passengers, bystanders, and pedestrians), collisions involving police vehicles, drownings during police chases, falls from heights during pursuit, asphyxiation during restraint, and suicides occurring in the context of police operations, often during SWAT incidents. (source:  IncarcerNation's ["About Us" page](https://incarcernation.com/about-us/)).
 
-IN's inclusion criteria are therefore much broader than MPV's, and they are the only actively updating project with coverage equivalent to the legacy Fatal Encounters project.  While most of their incidents overlap with MPV, they are the unique source for pursuit-related fatalities.
+IN's inclusion criteria are therefore much broader than MPV's, and they are the only active project with coverage equivalent to the legacy Fatal Encounters project.  While most of their incidents overlap with MPV, they are the unique source for pursuit-related fatalities.
 
-IN does not make their dataset downloadable for the public, so we manually review and transcribe information only for the cases they list for Washington state.  During transcription, duplicate cases, cases from Washington DC and cases that turn out to be non-police related homicides are excluded.  Many of the IN cases are also covered by MPV and the local WA project, but when IN is the primary source of information, we note that. 
+IN does not make their dataset downloadable for the public, so we manually review and transcribe information for the cases they list in Washington state.  During transcription, duplicate cases, cases from Washington DC and cases that turn out to be non-police related homicides are excluded.  Many of the IN cases are also covered by MPV and the local WA project, but when IN is the primary source of information, we note that. 
+
+The IN website can be found here:  https://incarcernation.com/ 
 
 ____
 
