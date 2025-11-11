@@ -15,7 +15,7 @@
 !/Data
 /Data/*
 !/Data/Clean/WA_2015.rda
-!/Data/Clean/WA_agencies.2025.rda
+!/Data/Clean/WA.agencies.2025.rda
 
 # Report replication script
 !/Report
