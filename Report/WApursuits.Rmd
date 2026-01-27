@@ -113,70 +113,15 @@ I2113.num.apf <- policy.period.apf$Total[policy.period.apf$Period == "I2113"]
 
 ```
 
-# Introduction {.tabset .tabset-pills}
+# Pursuit policy impacts {.tabset .tabset-pills}
 
-This report examines fatalities associated with vehicle pursuits by law enforcement in WA State since 2015. 
+This report examines fatalities associated with vehicle pursuits by law enforcement in WA State since 2015, and how they have changed over time. 
 
 Pursuits are unique among police tactics in their risk of collateral damage.  Nationally, about one-third of pursuits lead to vehicular accidents, and a substantial fraction (over a third) of those injured or killed in these accidents are uninvolved bystanders, passengers and officers.  
 
-Here in Washington state, recent legislative changes provide an opportunity to observe whether pursuit policies can help to reduce these fatalities.
+Here in Washington state, recent legislative changes provide an opportunity to observe whether pursuit policies can help to reduce these fatalities.  There are now 4 different policy periods observed in the decade of data we are tracking.  A statewide pursuit safety policy was first adopted in 2021, and then modified in two successive rollbacks.  
 
-## What this report covers
-
-The report examines the range of fatalities that are associated with police vehicular pursuits:
-
-* "Pursuit vehicular fatalities" - an active or recently terminated vehicular pursuit led to a vehicular homicide caused by one of the cars involved in the pursuit.
-
-* "After pursuit fatalities" -- a pursuit was involved earlier in the incident, but had ended by the time the fatality occurred.  Typically the person killed in these cases is the fleeing subject who is shot by police at the end of the chase.
-
-* "Attempted stop fatalities" -- a subject fled an attempted stop by police and committed a vehicular homicide in the process, but the police vehicle did not engage in pursuit.
-
-The majority of the report focuses on the first two types: pursuit vehicular fatalities and after pursuit fatalities, examined separately.  The attempted stop fatalities are different for several reasons, so we address them in a [section of their own](#attempted-stops).
-
-## How the report is organized
-
-The table of contents on the left shows the outline of the information.  All of the entries are linked and can be used to navigate through the report.  Note that clicking on an entry of the TOC will cause the sub-headings to display if there are any.  
-
-Within each section of the report listed in the TOC, you may find "tabs" on the page that contain additional information.  The active tab is highlighted with a blue filled box, and you can click the inactive tabs on either side of the active tab to access their information.
-
-The graphics use a consistent color coding to help with comparisons, and the color scheme is linked to the type of data in the graph:  pursuit vehicular fatalities (color codes for victim type), after pursuit fatalities (color codes for homicide vs. suicide), and incidents (color codes for pursuit vehicular fatalities and after pursuit fatalities).
-
-## Legislative history {.tabset .tabset-pills}
-
-Pursuit policy has been an active area of legislation in WA State, with parallels to the policy changes that took place in [Milwaukee, WI](https://city.milwaukee.gov/fpc/Reports/ReportsonMPD/Vehicle-Pursuit-Reports.htm).  The changes define four policy periods in WA state useful for comparative analysis:
-
-### Pre-reform
-
-*before July 25, 2021*
-
-  Pursuit policies during this period were decentralized, and established by each agency, so there was a patchwork of different policies across the state.  Some policies were quite restrictive, others left decisions to the discretion of officers.  In this report, we look back to Jan 1, 2015 as the start of this observation period.
-
-### HB1054  
-
-*July 25, 2021 - May 2, 2023*
-
-  In 2021 the legislature enacted a statewide policy to provide a uniform standard and to improve public safety by reducing the growing number of people killed during these pursuits ([House Bill 1054](https://app.leg.wa.gov/billsummary?BillNumber=1054&Year=2021&Initiative=false), effective July 25, 2021).  At the time, pursuits were responsible for 10-20% of the fatalities from police activities each year. About half of those killed were passengers, officers or uninvolved bystanders. 
-
-  HB 1054 established a clear standard for balancing the danger posed to the public by the pursuit against the danger posed by a fleeing subject.  It prioritized public safety: police are allowed to engage in pursuits when there is a well established threat to public safety – violent offenses (like carjackings, armed robberies), sex offenses, DUIs, and prison escapes – but not for misdemeanors or property crimes.  It required that the evidence of the threat meets the "probable cause" standard -- the same standard required to make an arrest.  In effect the law said:  If you don't have enough evidence to arrest the person, then you can not justify the risk to public safety for this pursuit.  
-
-### SB5253 
-
-*May 3, 2023 - June 5, 2024*
-
-  In 2023 the legislature [modified the policy](https://app.leg.wa.gov/billsummary?BillNumber=5352&Year=2023), lowering the standard of evidence required from probable cause to reasonable suspicion, adding vehicular and domestic assaults explicitly to the list of offenses eligible for pursuit, and removing the requirement for supervisory authorization.  These changes took effect May 3, 2023.  
-
-### I2113
-
-*after June 5, 2024 (Current)*
-
-  In response to a successful initiative campaign to place a pursuit policy rollback on the November 2024 ballot, the legislature took the option of passing [the initiative](https://lawfilesext.leg.wa.gov/biennium/2023-24/Pdf/Initiatives/Initiatives/INITIATIVE%202113.SL.pdf?q=20241017145635) themselves in March 2024.  The initiative removed all of the explicit public safety requirements for allowable pursuits, and replaced them with a simple discretionary requirement that "the threat to the safety of others and the safety risks of failing to apprehend or identify the person are considered to be greater than the safety risks of the vehicular pursuit under the circumstances."
-
-The full texts of the bills passed and the current law (RCW) on vehicle pursuits can be found in the [Pursuit legislation](#pursuit-legislation) section at the end of this report.
-
-# Impact of policy changes {.tabset .tabset-pills}
-
-
-There are now 4 different policy periods observed in the decade of data we are tracking.  We compare them below using an estimated annualized rate of pursuit-related fatalities for each period.
+The annualized pursuit fatality rates for each policy period are compared below.
 
 ```{r annualized.rates, message=F, warning=F}
 
@@ -250,7 +195,10 @@ xlabs <- c(
 
 p <- ggplot(annual_rate_df, 
             aes(x=`Policy period`, y=`Annualized rate`, 
-                fill=`Annualized rate`)) +
+                fill=`Annualized rate`,
+                text = paste("Policy period: ", `Policy period`, "<br>",
+                             "Annualized rate: ", `Annualized rate`))) +
+  
   geom_bar(stat = "identity", color="grey", alpha = 0.8) +
   
 
@@ -265,13 +213,13 @@ p <- ggplot(annual_rate_df,
   scale_x_discrete(breaks=xbrks, labels=xlabs)
 
 
-ggplotly(p)
+ggplotly(p, tooltip = "text")
 
 ```
 
-In the short time since I-2113 rolled back the pursuit safety restrictions, the data show that the pursuit-related fatality rate has risen dramatically.  
+The most recent policy change was the passage of Initiative 2113, which rolled back most of the earlier pursuit safety restrictions.  The data show a steep rise in the pursuit-related fatality rate post I-2113.  
 
-* It is now `r annual_rate_df$"Rate relative to HB1054"[annual_rate_df$"Policy period" == "I2113"]`  times as high as it was during the HB1054 period, when pursuits were restricted to violent felonies and DUIs.  
+* It is now `r annual_rate_df$"Rate relative to HB1054"[annual_rate_df$"Policy period" == "I2113"]`  times as high as it was during the HB1054 period, when pursuits were restricted to violent felonies and DUIs and required probable cause.  
 
 * In a typical year, this means `r fatality_change` more people will be killed as a result of police pursuits.
 
@@ -305,18 +253,86 @@ annual_rate_df %>%
 
 ____
 
-## Comments
+## Data and Metrics
 
-There are different methods one can use to assess the impacts of the sequence of pursuit policy changes in WA.  But it is complicated by the fact that the lengths of the policy periods are quite different, the dates the policies became effective do not line up with any type of standardized year (calendar or legislative), and the fatality counts for the shorter policy periods are too small to support a robust statistical analysis.  We previously reported a fatality count comparison with a standardized  time window, pre and post reform.  But with 4, different length, policy periods, that approach no longer works.
+The data we use is described in detail in the [Data Section](#Data)
 
-For this policy impact summary section we have decided to report annualized fatality rates for each policy period.  This metric has both benefits and drawbacks:
+With respect to metrics for assessing the impacts of the sequence of pursuit policy changes in WA, comparison is complicated by the fact that the lengths of the policy periods are quite different, the dates the policies became effective do not line up with any type of standardized year (calendar or legislative), and the fatality counts for the shorter policy periods are too small to support a robust statistical analysis.  We previously reported a fatality count comparison with a standardized time window, pre and post reform.  But with 4, different length, policy periods, that approach no longer works.
+
+For the graph in this policy impact section the metric we use is estimated annualized fatality rates for each policy period. This is defined simply as the number of fatalities divided by the number of years in the policy period (the ratio of the number of days in the policy period to 365). This metric has both benefits and drawbacks:
 
 * *Benefits* -- It provides a single summary number that can be compared across all periods, regardless of their length, and it allows us to use the exact dates when legislation became effective to define the periods.
 
-* *Drawbacks* -- In contrast to the number of persons killed in a specific legislative year (or other standardized time frame), the annualized fatality rate is an *estimate* of the average rate of fatalities per year. The reliability of that estimate depends on the number of years observed.  In our case the policies changed so frequently that several periods are quite short, which means the annualized estimate we get is not very reliable.  
+* *Drawbacks* -- In contrast to the number of persons killed in a specific legislative year (or other standardized time frame), the annualized fatality rate is an *estimate* of the average rate of fatalities per year. The reliability of that estimate depends on the number of years observed.  In our case the policies changed so frequently that several periods are quite short, which means the annualized estimate we get is less reliable.  
 
 
-In later sections of this report we present fatalities broken down by calender and approximate legislative year, showing the breakdown of the victims (officer, bystanders, passengers, subjects) in each timeframe.
+In later sections of this report we present the raw count of fatalities broken down by calender and approximate legislative year, showing the breakdown of the victims (officer, bystanders, passengers, subjects) in each timeframe.
+
+
+
+# Overview of report {.tabset .tabset-pills}
+
+## What this report covers
+
+Pursuit-related fatalities occur in multiple ways:
+
+* "Pursuit vehicular fatalities" - an active or recently terminated vehicular pursuit led to a fatal accident caused by one of the cars involved in the pursuit.
+
+* "After pursuit fatalities" -- a pursuit was involved earlier in the incident, but had ended by the time the fatality occurred.  Typically the person killed in these cases is the fleeing subject who is shot by police at the end of the chase.
+
+* "Attempted stop fatalities" -- a subject fled an attempted stop by police which led to a fatal accident, but the police vehicle did not engage in pursuit.
+
+This report examines all of these.  The majority of the report focuses on the first two types: pursuit vehicular fatalities and after pursuit fatalities, examined separately.  The attempted stop fatalities are unique for several reasons, so we address them in a [section of their own](#attempted-stops).
+
+____
+
+## How the report is organized
+
+The table of contents on the left shows the outline of the information.  All of the entries are linked and can be used to navigate through the report.  Note that clicking on an entry of the TOC will cause the sub-headings to display if there are any.  
+
+Within each section of the report listed in the TOC, you may find "tabs" on the page that contain additional information.  The active tab is highlighted with a blue filled box, and you can click the inactive tabs on either side of the active tab to access their information.
+
+The graphics use a consistent color coding to help with comparisons, and the color scheme is linked to the type of data in the graph:  pursuit vehicular fatalities (color codes for victim type), after pursuit fatalities (color codes for homicide vs. suicide), and incidents (color codes for pursuit vehicular fatalities and after pursuit fatalities).
+
+____
+
+## Legislative history {.tabset .tabset-pills}
+
+Pursuit policy has been an active area of legislation in WA State, with parallels to the policy changes that took place in [Milwaukee, WI](https://city.milwaukee.gov/fpc/Reports/ReportsonMPD/Vehicle-Pursuit-Reports.htm).  The changes define four policy periods in WA state useful for comparative analysis:
+
+### Pre-reform
+
+*before July 25, 2021*
+
+  Pursuit policies during this period were decentralized, and established by each agency, so there was a patchwork of different policies across the state.  Some policies were quite restrictive, others left decisions to the discretion of officers.  In this report, we look back to Jan 1, 2015 as the start of this observation period.
+
+____
+
+### HB1054  
+
+*July 25, 2021 - May 2, 2023*
+
+  In 2021 the legislature enacted a statewide policy to provide a uniform standard and to improve public safety by reducing the growing number of people killed during these pursuits ([House Bill 1054](https://app.leg.wa.gov/billsummary?BillNumber=1054&Year=2021&Initiative=false), effective July 25, 2021).  At the time, pursuits were responsible for 10-20% of the fatalities from police activities each year. About half of those killed were passengers, officers or uninvolved bystanders. 
+
+  HB 1054 established a clear standard for balancing the danger posed to the public by the pursuit against the danger posed by a fleeing subject.  It prioritized public safety: police are allowed to engage in pursuits when there is a well established threat to public safety – violent offenses (like carjackings, armed robberies), sex offenses, DUIs, and prison escapes – but not for misdemeanors or property crimes.  It required that the evidence of the threat meets the "probable cause" standard -- the same standard required to make an arrest.  In effect the law said:  If you don't have enough evidence to arrest the person, then you can not justify the risk to public safety for this pursuit.  
+
+____
+
+### SB5253 
+
+*May 3, 2023 - June 5, 2024*
+
+  In 2023 the legislature [modified the policy](https://app.leg.wa.gov/billsummary?BillNumber=5352&Year=2023), lowering the standard of evidence required from probable cause to reasonable suspicion, adding vehicular and domestic assaults explicitly to the list of offenses eligible for pursuit, and removing the requirement for supervisory authorization.  These changes took effect May 3, 2023.  
+
+____
+
+### I2113
+
+*after June 5, 2024 (Current)*
+
+  In response to a successful initiative campaign to place a pursuit policy rollback on the November 2024 ballot, the legislature took the option of passing [the initiative](https://lawfilesext.leg.wa.gov/biennium/2023-24/Pdf/Initiatives/Initiatives/INITIATIVE%202113.SL.pdf?q=20241017145635) themselves in March 2024.  The initiative removed all of the explicit public safety requirements for allowable pursuits, and replaced them with a simple discretionary requirement that "the threat to the safety of others and the safety risks of failing to apprehend or identify the person are considered to be greater than the safety risks of the vehicular pursuit under the circumstances."
+
+The full texts of the bills passed and the current law (RCW) on vehicle pursuits can be found in the [Pursuit legislation](#pursuit-legislation) section at the end of this report.
 
 ____
 
@@ -328,7 +344,7 @@ The second map adds in after pursuit fatalities.
 
 ## Pursuit vehicular fatalities
 
-Each marker represents an active vehicle pursuit that ended with a vehicular homicide.
+Each marker represents an active vehicle pursuit that ended with a fatal accident.
 
 * Red markers are pursuits that resulted in bystanders, passengers and/or officers (B/P/O) being killed or injured.
 
@@ -599,7 +615,7 @@ They are the second leading cause of death from police activities.
 
 ____
 
-The table below breaks down the cause of death for all persons killed during an encounter with law enforcement since 2015. After pursuit vehicular fatalities, all causes comprising less than 2% of fatalities are grouped together.  Note that some of the gunshot fatalities involve pursuits, but the cause of death is not vehicular homicide.
+The table below breaks down the cause of death for all persons killed during an encounter with law enforcement since 2015. After pursuit vehicular fatalities, all causes comprising less than 2% of fatalities are grouped together.  Note that some of the gunshot fatalities involve pursuits, but the cause of death is not a fatal accident.
 
 
 ```{r fatalities.all.cod}
@@ -1619,7 +1635,7 @@ Recall that we do not have data on all vehicular pursuit incidents -- we only ha
 
 ### Fatalities per incident
 
-We only observe multi-fatality incidents for the pursuit vehicular homicides. There may have been accidents and injuries during the after pursuit fatalities but we are not capturing those in our data. 
+We only observe multi-fatality incidents for the pursuit vehicular fatalities. There may have been non-fatal accidents and injuries during the after pursuit fatalities but we are not capturing those in our data. 
 
 ```{r inci.fatalities, message=F, warning=F}
 incidents.pvf  %>%
@@ -2400,13 +2416,13 @@ All cases in the merged WA local dataset were reviewed for evidence of pursuit i
 
 We reviewed all evidence available in the original source datasets, including variables coded by FE, IN, MPV and WaPo and the link to the original verification document (typically a news article).  We conducted additional online searches to find other media reports, coroner/ME reports, social media posts, and Law Enforcement Agency announcements.  Using this information we classified cases into the following categories:
 
-* *Active Pursuit* -- vehicular homicides from an active pursuit (e.g., a crash-related fatality, or someone getting run over).  
+* *Active Pursuit* -- fatal accidents from an active pursuit (e.g., a crash-related fatality, or someone getting run over).  
 
-* *Terminated pursuit* -- vehicular homicides from an active pursuit that was reportedly terminated just before the accident occurred.  "Just before" means within a minute or a mile.
+* *Terminated pursuit* -- fatal accidents from an active pursuit that was reportedly terminated just before the accident occurred.  "Just before" means within a minute or a mile.
 
-* *Involved pursuit * -- a vehicle pursuit occurred during the incident, but it had finished before the person was killed.  Typically the person killed in these cases is a fleeing subject who is either shot by police at the end of the chase, or their death is ruled a suicide due to a self-inflicted gunshot.   Less commonly, if police terminate a pursuit the subject may continue to flee for some time, and cause a vehicular homicide that happens well after the end of the pursuit.  In these cases the fatality may be an uninvolved bystander or passenger.
+* *Involved pursuit * -- a vehicle pursuit occurred during the incident, but it had finished before the person was killed.  Typically the person killed in these cases is a fleeing subject who is either shot by police at the end of the chase, or their death is ruled a suicide due to a self-inflicted gunshot.   Less commonly, if police terminate a pursuit the subject may continue to flee for some time, and cause a fatal accident that happens well after the end of the pursuit.  In these cases the fatality may be an uninvolved bystander or passenger.
 
-* *Attempted stop* -- vehicular homicides that occur when the subject flees a traffic stop but is not pursued.  We often have to rely on a media report of the law enforcement statement that there was no pursuit, but the patrol car lights and/or siren may have been activated.
+* *Attempted stop* -- fatal accidents that occur when the subject flees a traffic stop but is not pursued.  We often have to rely on a media report of the law enforcement statement that there was no pursuit, but the patrol car lights and/or siren may have been activated.
 
 * *Vehicle accident* -- vehicular homicides by police that are not related in any way to a pursuit (e.g., an on- or off-duty officer ran someone over and killed them).
 
@@ -2415,7 +2431,7 @@ We reviewed all evidence available in the original source datasets, including va
 
 ### Final categories
 
-We grouped the active and terminated pursuits together into the "Pursuit vehicular homicide" category, and split the involved pursuits into "After pursuit homicides" and "After pursuit suicides".
+We grouped the active and terminated pursuits together into the "Pursuit vehicular fatality" category, and split the involved pursuits into "After pursuit homicides" and "After pursuit suicides".
 
 
 ```{r case.definition, message=F, warning=F}
@@ -2492,7 +2508,7 @@ In 2 incidents, the information available in the media report left it somewhat u
 
 In 1 incident, the events lay on the boundary of the pursuit category:  Sergey Pavlovich (6/28/2019).  Here the officer reportedly was making a U-turn in response to a 911 call for speeding motorcycles, and saw the motorcycles approaching him at the time.  Pavlovich crashed his motorcycle into the patrol car and was killed.  It is unclear whether the officer intended to give pursuit.  We coded this case as "pursuit-involved", but it could also be considered a "Vehicular accident".  Since neither classification is included in the cases used to estimate policy impact the decision has no effect on those estimates.
 
-In 1 incident, an unusual set of events could be construed as either "pursuit-involved" or "terminated pursuit".  This incident involved a speeding motorist who was actively pursued multiple times over the course of an hour by 4 different state patrol troopers and by local police.  In each instance, the pursuit was terminated for safety reasons, as the motorist exceeded 100 mph and was weaving in and out of traffic on both highways and city streets.  The last pursuit was terminated 10 minutes before the motorist, still travelling at high speed and headed the wrong way down a highway exit ramp, crashed into another vehicle, killing 2 children in that vehicle (Delilah Minshew and Timothy Escamilla, 2/28/2023).  Since the pursuit was terminated 10 minutes before the crash, and our definition of terminated pursuits requires termination within a minute or a mile of the vehicular homicide, we classified this incident as "pursuit-involved".  If this were classified instead as a "terminated pursuit", the definition change would require reclassifying other cases for consistency, and without doing that the change in the estimated policy impacts can not be calculated. 
+In 1 incident, an unusual set of events could be construed as either "pursuit-involved" or "terminated pursuit".  This incident involved a speeding motorist who was actively pursued multiple times over the course of an hour by 4 different state patrol troopers and by local police.  In each instance, the pursuit was terminated for safety reasons, as the motorist exceeded 100 mph and was weaving in and out of traffic on both highways and city streets.  The last pursuit was terminated 10 minutes before the motorist, still travelling at high speed and headed the wrong way down a highway exit ramp, crashed into another vehicle, killing 2 children in that vehicle (Delilah Minshew and Timothy Escamilla, 2/28/2023).  Since the pursuit was terminated 10 minutes before the crash, and our definition of terminated pursuits requires termination within a minute or a mile of the fatal accident, we classified this incident as "pursuit-involved".  If this were classified instead as a "terminated pursuit", the definition change would require reclassifying other cases for consistency, and without doing that the change in the estimated policy impacts can not be calculated. 
 
 ____
 
