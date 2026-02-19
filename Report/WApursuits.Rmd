@@ -219,7 +219,7 @@ ggplotly(p, tooltip = "text")
 
 The most recent policy change was the passage of Initiative 2113, which rolled back most of the earlier pursuit safety restrictions.  The data show a steep rise in the pursuit-related fatality rate post I-2113.  
 
-* It is now `r annual_rate_df$"Rate relative to HB1054"[annual_rate_df$"Policy period" == "I2113"]`  times as high as it was during the HB1054 period, when pursuits were restricted to violent felonies and DUIs and required probable cause.  
+* It is now `r annual_rate_df$"Rate relative to HB1054"[annual_rate_df$"Policy period" == "I2113"]`  times as high as it was during the HB1054 period, when pursuits were restricted to probable cause for violent crimes and/or reasonable suspicion of DUI.  
 
 * In a typical year, this means `r fatality_change` more people will be killed as a result of police pursuits.
 
